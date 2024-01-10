@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 	"os/user"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/havce/havcebot"
+	"github.com/havce/havcebot/discord"
 )
 
 // Build version, injected during build.
@@ -21,7 +23,11 @@ var (
 	commit  string
 )
 
-type Config struct{}
+type Config struct {
+	GuildID  string `toml:"guild_id"`
+	BotToken string `toml:"bot_token"`
+	AppID    string `toml:"app_id"`
+}
 
 func main() {
 	// Propagate build information to root package to share globally.
@@ -31,7 +37,7 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	m := &Main{}
+	m := NewMain()
 
 	// Parse command line flags & load configuration.
 	if err := m.ParseFlagAndConfig(ctx, os.Args[1:]); err == flag.ErrHelp {
@@ -41,16 +47,38 @@ func main() {
 		os.Exit(1)
 	}
 
-	m.Run(ctx)
+	if err := m.Run(ctx); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+
+	<-ctx.Done()
+
+	if err := m.Close(ctx); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 }
 
 type Main struct {
 	Config     Config
 	ConfigPath string
+
+	Discord *discord.Server
 }
 
 func NewMain() *Main {
-	return &Main{}
+	return &Main{
+		Discord: discord.NewServer(),
+	}
+}
+
+func (m *Main) Close(ctx context.Context) error {
+	if m.Discord != nil {
+		return m.Discord.Close(ctx)
+	}
+
+	return nil
 }
 
 func (m *Main) ParseFlagAndConfig(ctx context.Context, args []string) error {
@@ -105,15 +133,9 @@ func expand(path string) (string, error) {
 	return filepath.Join(u.HomeDir, strings.TrimPrefix(path, "~"+string(os.PathSeparator))), nil
 }
 
-func DefaultConfig() Config {
-	var config Config
-
-	return config
-}
-
 // ReadConfigFile unmarshals config from
 func ReadConfigFile(filename string) (Config, error) {
-	config := DefaultConfig()
+	config := Config{}
 	if buf, err := os.ReadFile(filename); err != nil {
 		return config, err
 	} else if err := toml.Unmarshal(buf, &config); err != nil {
@@ -122,4 +144,16 @@ func ReadConfigFile(filename string) (Config, error) {
 	return config, nil
 }
 
-func (m *Main) Run(ctx context.Context) error { return nil }
+func (m *Main) Run(ctx context.Context) error {
+	m.Discord.AppID = m.Config.AppID
+	m.Discord.BotToken = m.Config.BotToken
+	m.Discord.GuildID = m.Config.GuildID
+
+	if err := m.Discord.Open(ctx); err != nil {
+		return err
+	}
+
+	slog.Log(ctx, slog.LevelInfo, "havcebotd started")
+
+	return nil
+}
