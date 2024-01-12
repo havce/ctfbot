@@ -106,22 +106,60 @@ func (s *Server) handleCreateCTF(event *handler.ComponentEvent) error {
 }
 
 func (s *Server) handleJoinCTF(event *handler.ComponentEvent) error {
-	// TODO
-	role := event.Variables["ctf"]
-	if role == "" {
-		return errors.New("empty role name")
+	ctf := event.Variables["ctf"]
+	if ctf == "" {
+		return errors.New("empty ctf name")
 	}
 
-	roleSnow, err := snowflake.Parse(role)
+	err := event.DeferCreateMessage(true)
 	if err != nil {
 		return err
 	}
 
-	roleIds := append(event.Member().RoleIDs, roleSnow)
+	roles, err := s.client.Rest().GetRoles(snowflake.MustParse(s.GuildID))
+	if err != nil {
+		return err
+	}
+
+	var ctfRole *discord.Role
+	for _, role := range roles {
+		if role.Name == fmt.Sprintf("%s player", ctf) {
+			ctfRole = &role
+			break
+		}
+	}
+
+	if ctfRole == nil {
+		return fmt.Errorf("could not find role for CTF %s", ctf)
+	}
+
+	if slices.Contains(event.Member().RoleIDs, ctfRole.ID) {
+		_, err = event.UpdateInteractionResponse(
+			discord.NewMessageUpdateBuilder().
+				SetEmbeds(discord.NewEmbedBuilder().
+					SetColor(havcebot.ColorBlurple).
+					SetDescriptionf("You already joined CTF `%s`.", ctf).
+					Build()).
+				Build())
+		return err
+	}
+
+	roleIds := append(event.Member().RoleIDs, ctfRole.ID)
 
 	_, err = s.client.Rest().UpdateMember(*event.GuildID(), event.User().ID, discord.MemberUpdate{
 		Roles: &roleIds,
 	})
+	if err != nil {
+		return err
+	}
 
+	_, err = event.CreateFollowupMessage(
+		discord.NewMessageCreateBuilder().
+			SetEphemeral(true).
+			SetEmbeds(discord.NewEmbedBuilder().
+				SetColor(havcebot.ColorGreen).
+				SetDescriptionf("You successfully joined CTF `%s`.", ctf).
+				Build()).
+			Build())
 	return err
 }
