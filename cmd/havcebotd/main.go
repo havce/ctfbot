@@ -24,9 +24,11 @@ var (
 )
 
 type Config struct {
-	GuildID  string `toml:"guild_id"`
-	BotToken string `toml:"bot_token"`
-	AppID    string `toml:"app_id"`
+	General struct {
+		GuildID  string `toml:"guild_id"`
+		BotToken string `toml:"bot_token"`
+		AppID    string `toml:"app_id"`
+	} `toml:"general"`
 }
 
 func main() {
@@ -145,9 +147,9 @@ func ReadConfigFile(filename string) (Config, error) {
 }
 
 func (m *Main) Run(ctx context.Context) error {
-	m.Discord.AppID = m.Config.AppID
-	m.Discord.BotToken = m.Config.BotToken
-	m.Discord.GuildID = m.Config.GuildID
+	m.Discord.AppID = m.Config.General.AppID
+	m.Discord.BotToken = m.Config.General.BotToken
+	m.Discord.GuildID = m.Config.General.GuildID
 
 	if err := m.Discord.Open(ctx); err != nil {
 		return err

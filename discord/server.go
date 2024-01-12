@@ -26,8 +26,12 @@ func NewServer() *Server {
 
 	s.router.Use(middleware.Logger)
 	s.router.Group(func(r handler.Router) {
-		r.Use(middleware.Print("group2"))
-		r.Command("/ping", s.handlePing)
+		r.Command("/new_ctf", s.handleCommandNewCTF)
+		r.Component("/new_ctf/{data}/create", s.handleCreateCTF)
+	})
+
+	s.router.Group(func(r handler.Router) {
+		r.Component("/join/{ctf}", s.handleJoinCTF)
 	})
 	return s
 }
