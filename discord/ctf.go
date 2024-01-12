@@ -3,20 +3,24 @@ package discord
 import (
 	"errors"
 	"fmt"
-
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/handler"
 	"github.com/disgoorg/snowflake/v2"
+	"github.com/havce/havcebot"
+	"slices"
 )
 
 func (s *Server) handleCommandNewCTF(event *handler.CommandEvent) error {
 	ctfName := event.SlashCommandInteractionData().String("name")
 
 	return event.CreateMessage(discord.NewMessageCreateBuilder().
-		SetContentf("Would you like to create a new CTF named %s?", ctfName).
+		SetEmbeds(discord.NewEmbedBuilder().
+			SetColor(havcebot.ColorBlurple).
+			SetDescriptionf("Would you like to create a new CTF named `%s`?", ctfName).
+			Build()).
 		SetEphemeral(true).
 		AddActionRow(
-			discord.NewPrimaryButton("Yes", fmt.Sprintf("new_ctf/%s/create", ctfName)),
+			discord.NewSuccessButton("Yes, create it", fmt.Sprintf("new_ctf/%s/create", ctfName)),
 		).
 		Build(),
 	)
@@ -57,8 +61,8 @@ func (s *Server) handleCreateCTF(event *handler.ComponentEvent) error {
 		return err
 	}
 
-	// Create general channel inside category.
-	general, err := s.client.Rest().CreateGuildChannel(
+	// Create registration channel inside category.
+	regChannel, err := s.client.Rest().CreateGuildChannel(
 		snowflake.MustParse(s.GuildID),
 		discord.GuildTextChannelCreate{
 			Name:     "registration",
@@ -78,11 +82,14 @@ func (s *Server) handleCreateCTF(event *handler.ComponentEvent) error {
 	}
 
 	// Create recruitment message in registration text channel.
-	// We need to add a database to store the currently managed CTFs.
-	_, err = s.client.Rest().CreateMessage(general.ID(), discord.NewMessageCreateBuilder().
-		SetContentf("Press the button to join %s", ctf).
+	// TODO: We need to add a database to store the currently managed CTFs.
+	_, err = s.client.Rest().CreateMessage(regChannel.ID(), discord.NewMessageCreateBuilder().
+		SetEmbeds(discord.NewEmbedBuilder().
+			SetColor(havcebot.ColorBlurple).
+			SetDescriptionf("Press the button to join `%s`", ctf).
+			Build()).
 		AddActionRow(
-			discord.NewPrimaryButton(fmt.Sprintf("Join %s", ctf), fmt.Sprintf("join/%s", "TODO")),
+			discord.NewPrimaryButton(fmt.Sprintf("Join %s", ctf), fmt.Sprintf("join/%s", ctf)),
 		).Build())
 	if err != nil {
 		return err
@@ -90,7 +97,10 @@ func (s *Server) handleCreateCTF(event *handler.ComponentEvent) error {
 
 	return event.UpdateMessage(
 		discord.NewMessageUpdateBuilder().
-			SetContentf("%s was successfully created!", ctf).
+			SetEmbeds(discord.NewEmbedBuilder().
+				SetColor(havcebot.ColorGreen).
+				SetDescriptionf("CTF `%s` was successfully created!", ctf).
+				Build()).
 			ClearContainerComponents().
 			Build())
 }
