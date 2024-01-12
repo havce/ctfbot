@@ -1,1 +1,5 @@
 *.toml
+
+/.vscode
+/.idea
+*.iml
