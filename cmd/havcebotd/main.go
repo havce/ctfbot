@@ -27,7 +27,6 @@ type Config struct {
 	General struct {
 		GuildID  string `toml:"guild_id"`
 		BotToken string `toml:"bot_token"`
-		AppID    string `toml:"app_id"`
 	} `toml:"general"`
 }
 
@@ -42,22 +41,22 @@ func main() {
 	m := NewMain()
 
 	// Parse command line flags & load configuration.
-	if err := m.ParseFlagAndConfig(ctx, os.Args[1:]); err == flag.ErrHelp {
+	if err := m.ParseFlagAndConfig(ctx, os.Args[1:]); errors.Is(err, flag.ErrHelp) {
 		os.Exit(1)
 	} else if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		_, _ = fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 
 	if err := m.Run(ctx); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		_, _ = fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 
 	<-ctx.Done()
 
 	if err := m.Close(ctx); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		_, _ = fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
@@ -135,7 +134,7 @@ func expand(path string) (string, error) {
 	return filepath.Join(u.HomeDir, strings.TrimPrefix(path, "~"+string(os.PathSeparator))), nil
 }
 
-// ReadConfigFile unmarshals config from
+// ReadConfigFile unmarshalls config from
 func ReadConfigFile(filename string) (Config, error) {
 	config := Config{}
 	if buf, err := os.ReadFile(filename); err != nil {
@@ -147,7 +146,6 @@ func ReadConfigFile(filename string) (Config, error) {
 }
 
 func (m *Main) Run(ctx context.Context) error {
-	m.Discord.AppID = m.Config.General.AppID
 	m.Discord.BotToken = m.Config.General.BotToken
 	m.Discord.GuildID = m.Config.General.GuildID
 

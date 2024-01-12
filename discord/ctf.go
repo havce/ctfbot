@@ -23,7 +23,7 @@ func (s *Server) handleCommandNewCTF(event *handler.CommandEvent) error {
 }
 
 func (s *Server) handleCreateCTF(event *handler.ComponentEvent) error {
-	ctf := event.Variables["data"]
+	ctf := event.Variables["ctf"]
 
 	// Create role with CTF name.
 	role, err := s.client.Rest().CreateRole(

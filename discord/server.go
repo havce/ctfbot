@@ -11,7 +11,6 @@ import (
 )
 
 type Server struct {
-	AppID    string
 	GuildID  string
 	BotToken string
 
@@ -27,7 +26,7 @@ func NewServer() *Server {
 	s.router.Use(middleware.Logger)
 	s.router.Group(func(r handler.Router) {
 		r.Command("/new_ctf", s.handleCommandNewCTF)
-		r.Component("/new_ctf/{data}/create", s.handleCreateCTF)
+		r.Component("/new_ctf/{ctf}/create", s.handleCreateCTF)
 	})
 
 	s.router.Group(func(r handler.Router) {
