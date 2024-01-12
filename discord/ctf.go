@@ -1,13 +1,16 @@
 package discord
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"slices"
+	"time"
+
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/handler"
 	"github.com/disgoorg/snowflake/v2"
 	"github.com/havce/havcebot"
-	"slices"
 )
 
 func (s *Server) handleCommandNewCTF(event *handler.CommandEvent) error {
@@ -33,7 +36,7 @@ func (s *Server) handleCreateCTF(event *handler.ComponentEvent) error {
 	role, err := s.client.Rest().CreateRole(
 		snowflake.MustParse(s.GuildID),
 		discord.RoleCreate{
-			Name:        fmt.Sprintf("%s player", ctf),
+			Name:        ctf,
 			Mentionable: true,
 		},
 	)
@@ -82,7 +85,6 @@ func (s *Server) handleCreateCTF(event *handler.ComponentEvent) error {
 	}
 
 	// Create recruitment message in registration text channel.
-	// TODO: We need to add a database to store the currently managed CTFs.
 	_, err = s.client.Rest().CreateMessage(regChannel.ID(), discord.NewMessageCreateBuilder().
 		SetEmbeds(discord.NewEmbedBuilder().
 			SetColor(havcebot.ColorBlurple).
@@ -91,6 +93,15 @@ func (s *Server) handleCreateCTF(event *handler.ComponentEvent) error {
 		AddActionRow(
 			discord.NewPrimaryButton(fmt.Sprintf("Join %s", ctf), fmt.Sprintf("join/%s", ctf)),
 		).Build())
+	if err != nil {
+		return err
+	}
+
+	err = s.CTFService.CreateCTF(context.TODO(), &havcebot.CTF{
+		Name:       ctf,
+		Start:      time.Now(),
+		PlayerRole: ctf,
+		CanJoin:    true})
 	if err != nil {
 		return err
 	}
@@ -116,6 +127,22 @@ func (s *Server) handleJoinCTF(event *handler.ComponentEvent) error {
 		return err
 	}
 
+	retrievedCTF, err := s.CTFService.FindCTFByName(context.TODO(), ctf)
+	if err != nil {
+		return err
+	}
+
+	if !retrievedCTF.CanJoin {
+		_, err = event.UpdateInteractionResponse(
+			discord.NewMessageUpdateBuilder().
+				SetEmbeds(discord.NewEmbedBuilder().
+					SetColor(havcebot.ColorBlurple).
+					SetDescriptionf("Registrations are closed for `%s`.", ctf).
+					Build()).
+				Build())
+		return err
+	}
+
 	roles, err := s.client.Rest().GetRoles(snowflake.MustParse(s.GuildID))
 	if err != nil {
 		return err
@@ -123,7 +150,7 @@ func (s *Server) handleJoinCTF(event *handler.ComponentEvent) error {
 
 	var ctfRole *discord.Role
 	for _, role := range roles {
-		if role.Name == fmt.Sprintf("%s player", ctf) {
+		if role.Name == retrievedCTF.PlayerRole {
 			ctfRole = &role
 			break
 		}
@@ -159,6 +186,33 @@ func (s *Server) handleJoinCTF(event *handler.ComponentEvent) error {
 			SetEmbeds(discord.NewEmbedBuilder().
 				SetColor(havcebot.ColorGreen).
 				SetDescriptionf("You successfully joined CTF `%s`.", ctf).
+				Build()).
+			Build())
+	return err
+}
+
+func (s *Server) handleCloseCTF(event *handler.CommandEvent) error {
+	ctf := event.SlashCommandInteractionData().String("name")
+
+	err := event.DeferCreateMessage(true)
+	if err != nil {
+		return err
+	}
+
+	newCanJoin := false
+	_, err = s.CTFService.UpdateCTF(context.TODO(), ctf, havcebot.CTFUpdate{
+		CanJoin: &newCanJoin,
+	})
+	if err != nil {
+		return err
+	}
+
+	_, err = event.CreateFollowupMessage(
+		discord.NewMessageCreateBuilder().
+			SetEphemeral(true).
+			SetEmbeds(discord.NewEmbedBuilder().
+				SetColor(havcebot.ColorGreen).
+				SetDescriptionf("You successfully closed registrations for CTF `%s`.", ctf).
 				Build()).
 			Build())
 	return err

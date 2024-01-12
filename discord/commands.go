@@ -15,5 +15,16 @@ var (
 				},
 			},
 		},
+		discord.SlashCommandCreate{
+			Name:        "close_ctf",
+			Description: "Close registrations to the named CTF",
+			Options: []discord.ApplicationCommandOption{
+				discord.ApplicationCommandOptionString{
+					Name:        "name",
+					Description: "CTF name",
+					Required:    true,
+				},
+			},
+		},
 	}
 )

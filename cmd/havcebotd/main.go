@@ -15,6 +15,7 @@ import (
 	"github.com/BurntSushi/toml"
 	"github.com/havce/havcebot"
 	"github.com/havce/havcebot/discord"
+	"github.com/havce/havcebot/sqlite"
 )
 
 // Build version, injected during build.
@@ -28,6 +29,22 @@ type Config struct {
 		GuildID  string `toml:"guild_id"`
 		BotToken string `toml:"bot_token"`
 	} `toml:"general"`
+
+	DB struct {
+		DSN string `toml:"dsn"`
+	} `toml:"db"`
+}
+
+const (
+	DefaultDSN        = "~/havcebot.sqlite3"
+	DefaultConfigPath = "~/havcebot.toml"
+)
+
+// DefaultConfig returns a new instance of Config with defaults set.
+func DefaultConfig() Config {
+	var config Config
+	config.DB.DSN = DefaultDSN
+	return config
 }
 
 func main() {
@@ -65,12 +82,18 @@ type Main struct {
 	Config     Config
 	ConfigPath string
 
+	DB *sqlite.DB
+
 	Discord *discord.Server
 }
 
 func NewMain() *Main {
 	return &Main{
 		Discord: discord.NewServer(),
+		DB:      sqlite.NewDB(""),
+
+		Config:     DefaultConfig(),
+		ConfigPath: DefaultConfigPath,
 	}
 }
 
@@ -136,7 +159,7 @@ func expand(path string) (string, error) {
 
 // ReadConfigFile unmarshalls config from
 func ReadConfigFile(filename string) (Config, error) {
-	config := Config{}
+	config := DefaultConfig()
 	if buf, err := os.ReadFile(filename); err != nil {
 		return config, err
 	} else if err := toml.Unmarshal(buf, &config); err != nil {
@@ -145,9 +168,23 @@ func ReadConfigFile(filename string) (Config, error) {
 	return config, nil
 }
 
-func (m *Main) Run(ctx context.Context) error {
+func (m *Main) Run(ctx context.Context) (err error) {
+	// Expand the DSN (in case it is in the user home directory ("~")).
+	// Then open the database. This will instantiate the SQLite connection
+	// and execute any pending migration files.
+	if m.DB.DSN, err = expandDSN(m.Config.DB.DSN); err != nil {
+		return fmt.Errorf("cannot expand dsn: %w", err)
+	}
+	if err := m.DB.Open(); err != nil {
+		return fmt.Errorf("cannot open db: %w", err)
+	}
+
+	ctfService := sqlite.NewCTFService(m.DB)
+
 	m.Discord.BotToken = m.Config.General.BotToken
 	m.Discord.GuildID = m.Config.General.GuildID
+
+	m.Discord.CTFService = ctfService
 
 	if err := m.Discord.Open(ctx); err != nil {
 		return err
@@ -156,4 +193,12 @@ func (m *Main) Run(ctx context.Context) error {
 	slog.Log(ctx, slog.LevelInfo, "havcebotd started")
 
 	return nil
+}
+
+// expandDSN expands a datasource name. Ignores in-memory databases.
+func expandDSN(dsn string) (string, error) {
+	if dsn == ":memory:" {
+		return dsn, nil
+	}
+	return expand(dsn)
 }

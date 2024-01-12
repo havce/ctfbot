@@ -1,4 +1,5 @@
 *.toml
+*.sqlite*
 
 /.vscode
 /.idea
