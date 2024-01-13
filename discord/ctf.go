@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math/rand"
 	"slices"
 	"strings"
 	"time"
@@ -36,7 +35,7 @@ func (s *Server) handleCreateCTF(event *handler.ComponentEvent) error {
 
 	// Create role with CTF name.
 	role, err := s.client.Rest().CreateRole(
-		snowflake.MustParse(s.GuildID),
+		*event.GuildID(),
 		discord.RoleCreate{
 			Name:        ctf,
 			Mentionable: true,
@@ -45,7 +44,7 @@ func (s *Server) handleCreateCTF(event *handler.ComponentEvent) error {
 
 	// Create category with the name of the CTF.
 	category, err := s.client.Rest().CreateGuildChannel(
-		snowflake.MustParse(s.GuildID),
+		*event.GuildID(),
 		discord.GuildCategoryChannelCreate{
 			Name:     ctf,
 			Topic:    "new ctf",
@@ -66,16 +65,28 @@ func (s *Server) handleCreateCTF(event *handler.ComponentEvent) error {
 		return err
 	}
 
+	var everyoneID *snowflake.ID
+	s.client.Caches().RolesForEach(*event.GuildID(), func(role discord.Role) {
+		if role.Name == "@everyone" {
+			everyoneID = &role.ID
+		}
+	})
+
 	// Create registration channel inside category.
 	regChannel, err := s.client.Rest().CreateGuildChannel(
-		snowflake.MustParse(s.GuildID),
+		*event.GuildID(),
 		discord.GuildTextChannelCreate{
 			Name:     "registration",
 			Topic:    fmt.Sprintf("%s player registration", ctf),
 			ParentID: category.ID(),
 			PermissionOverwrites: []discord.PermissionOverwrite{
 				discord.RolePermissionOverwrite{
-					RoleID: snowflake.ID(0),
+					RoleID: *everyoneID,
+					Allow:  discord.PermissionViewChannel | discord.PermissionReadMessageHistory,
+					Deny:   discord.PermissionsAll,
+				},
+				discord.RolePermissionOverwrite{
+					RoleID: role.ID,
 					Allow:  discord.PermissionViewChannel | discord.PermissionReadMessageHistory,
 					Deny:   discord.PermissionsAll,
 				},
@@ -95,6 +106,28 @@ func (s *Server) handleCreateCTF(event *handler.ComponentEvent) error {
 		AddActionRow(
 			discord.NewPrimaryButton(fmt.Sprintf("Join %s", ctf), fmt.Sprintf("join/%s", ctf)),
 		).Build())
+	if err != nil {
+		return err
+	}
+
+	// Create general channel inside category.
+	_, err = s.client.Rest().CreateGuildChannel(
+		*event.GuildID(),
+		discord.GuildTextChannelCreate{
+			Name:     "general",
+			ParentID: category.ID(),
+			PermissionOverwrites: []discord.PermissionOverwrite{
+				discord.RolePermissionOverwrite{
+					RoleID: *everyoneID,
+					Deny:   discord.PermissionsAll,
+				},
+				discord.RolePermissionOverwrite{
+					RoleID: role.ID,
+					Allow:  discord.PermissionsAllText | discord.PermissionUseApplicationCommands,
+				},
+			},
+		},
+	)
 	if err != nil {
 		return err
 	}
@@ -242,24 +275,68 @@ func (s *Server) handleFlag(prefix string) func(event *handler.CommandEvent) err
 
 		return event.CreateMessage(discord.NewMessageCreateBuilder().
 			SetContentf("%s %s! %s has flagged %s.", prefix,
-				Cheer(), event.User().String(), event.Channel().Name()).
+				cheer(), event.User().String(), event.Channel().Name()).
 			Build())
 	}
 }
 
-func Cheer() string {
-	cheers := []string{
-		"Hooray",
-		"Woo-hoo",
-		"Cheers",
-		"Yippee",
-		"Yay",
-		"Let's go",
-		"Hip, hip, hooray",
-		"Fantastic",
-		"Celebrate",
-		"Party time",
+func (s *Server) handleNewChal(event *handler.CommandEvent) error {
+	chalName := event.SlashCommandInteractionData().String("name")
+
+	found := false
+	s.client.Caches().ChannelsForEach(func(channel discord.GuildChannel) {
+		if chalName == channel.Name() {
+			found = true
+			return
+		}
+	})
+
+	if found {
+		return event.CreateMessage(discord.NewMessageCreateBuilder().
+			SetContentf("Someone has already created %s!", chalName).
+			SetEphemeral(true).Build())
 	}
 
-	return cheers[rand.Intn(len(cheers))]
+	currentChannel, _ := s.client.Caches().Channel(event.Channel().ID())
+	parentChannel, _ := s.client.Caches().Channel(*currentChannel.ParentID())
+
+	ctf, _ := s.CTFService.FindCTFByName(context.TODO(), parentChannel.Name())
+
+	var roleID *snowflake.ID
+	var everyoneID *snowflake.ID
+	s.client.Caches().RolesForEach(*event.GuildID(), func(role discord.Role) {
+		if role.Name == ctf.PlayerRole {
+			roleID = &role.ID
+		}
+
+		if role.Name == "@everyone" {
+			everyoneID = &role.ID
+		}
+	})
+
+	if roleID == nil {
+		return errors.New("roleID not found")
+	}
+
+	_, err := s.client.Rest().CreateGuildChannel(*event.GuildID(), discord.GuildTextChannelCreate{
+		Name:     chalName,
+		ParentID: parentChannel.ID(),
+		PermissionOverwrites: []discord.PermissionOverwrite{
+			discord.RolePermissionOverwrite{
+				RoleID: *everyoneID,
+				Deny:   discord.PermissionsAll,
+			},
+			discord.RolePermissionOverwrite{
+				RoleID: *roleID,
+				Allow:  discord.PermissionsAllText | discord.PermissionUseApplicationCommands,
+			},
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	return event.CreateMessage(discord.NewMessageCreateBuilder().
+		SetEphemeral(true).
+		SetContentf("Successfully added new channel %s.", chalName).Build())
 }

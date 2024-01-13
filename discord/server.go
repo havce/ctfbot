@@ -44,6 +44,7 @@ func NewServer() *Server {
 		r.Component("/join/{ctf}", s.handleJoinCTF)
 		r.Command("/flag", s.handleFlag("🚩"))
 		r.Command("/blood", s.handleFlag("🩸"))
+		r.Command("/new_chal", s.handleNewChal)
 	})
 
 	s.router.Group(func(r handler.Router) {

@@ -59,5 +59,15 @@ var (
 			Name:        "blood",
 			Description: "Prepends the channel name with a 🩸 emoji.",
 		},
+		discord.SlashCommandCreate{
+			Name:        "new_chal",
+			Description: "Add new private text channel",
+			Options: []discord.ApplicationCommandOption{
+				discord.ApplicationCommandOptionString{
+					Name:        "name",
+					Description: "Enable voting",
+					Required:    true,
+				}},
+		},
 	}
 )
