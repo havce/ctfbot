@@ -19,6 +19,10 @@ func (s *Server) handleInfoCTF(vote bool) func(event *handler.CommandEvent) erro
 			weeks = maybeWeeks
 		}
 
+		if err := event.DeferCreateMessage(!vote); err != nil {
+			return err
+		}
+
 		now := time.Now()
 		finish := time.Now().Add(time.Duration(weeks) * 24 * 7 * time.Hour)
 

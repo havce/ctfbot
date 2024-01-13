@@ -40,7 +40,7 @@ func NewServer() *Server {
 		r.Component("/new_ctf/{ctf}/create", s.handleCreateCTF)
 		r.Command("/close", s.handleUpdateCanJoin(false))
 		r.Command("/open", s.handleUpdateCanJoin(true))
-		r.Command("/vote", s.handleInfoCTF(false))
+		r.Command("/vote", s.handleInfoCTF(true))
 	})
 
 	// These routes are not authenticated.
