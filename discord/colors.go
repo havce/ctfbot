@@ -1,4 +1,4 @@
-package havcebot
+package discord
 
 // https://gist.github.com/thomasbnt/b6f455e2c7d743b796917fa3c205f812
 const (

@@ -14,6 +14,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/havce/havcebot"
+	"github.com/havce/havcebot/ctftime"
 	"github.com/havce/havcebot/discord"
 	"github.com/havce/havcebot/sqlite"
 )
@@ -179,12 +180,14 @@ func (m *Main) Run(ctx context.Context) (err error) {
 		return fmt.Errorf("cannot open db: %w", err)
 	}
 
+	ctfTimeClient := ctftime.NewClient()
 	ctfService := sqlite.NewCTFService(m.DB)
 
 	m.Discord.BotToken = m.Config.General.BotToken
 	m.Discord.GuildID = m.Config.General.GuildID
 
 	m.Discord.CTFService = ctfService
+	m.Discord.CTFTimeClient = ctfTimeClient
 
 	if err := m.Discord.Open(ctx); err != nil {
 		return err

@@ -18,7 +18,7 @@ func (s *Server) handleCommandNewCTF(event *handler.CommandEvent) error {
 
 	return event.CreateMessage(discord.NewMessageCreateBuilder().
 		SetEmbeds(discord.NewEmbedBuilder().
-			SetColor(havcebot.ColorBlurple).
+			SetColor(ColorBlurple).
 			SetDescriptionf("Would you like to create a new CTF named `%s`?", ctfName).
 			Build()).
 		SetEphemeral(true).
@@ -87,7 +87,7 @@ func (s *Server) handleCreateCTF(event *handler.ComponentEvent) error {
 	// Create recruitment message in registration text channel.
 	_, err = s.client.Rest().CreateMessage(regChannel.ID(), discord.NewMessageCreateBuilder().
 		SetEmbeds(discord.NewEmbedBuilder().
-			SetColor(havcebot.ColorBlurple).
+			SetColor(ColorBlurple).
 			SetDescriptionf("Press the button to join `%s`", ctf).
 			Build()).
 		AddActionRow(
@@ -109,7 +109,7 @@ func (s *Server) handleCreateCTF(event *handler.ComponentEvent) error {
 	return event.UpdateMessage(
 		discord.NewMessageUpdateBuilder().
 			SetEmbeds(discord.NewEmbedBuilder().
-				SetColor(havcebot.ColorGreen).
+				SetColor(ColorGreen).
 				SetDescriptionf("CTF `%s` was successfully created!", ctf).
 				Build()).
 			ClearContainerComponents().
@@ -136,7 +136,7 @@ func (s *Server) handleJoinCTF(event *handler.ComponentEvent) error {
 		_, err = event.UpdateInteractionResponse(
 			discord.NewMessageUpdateBuilder().
 				SetEmbeds(discord.NewEmbedBuilder().
-					SetColor(havcebot.ColorBlurple).
+					SetColor(ColorBlurple).
 					SetDescriptionf("Registrations are closed for `%s`.", ctf).
 					Build()).
 				Build())
@@ -164,7 +164,7 @@ func (s *Server) handleJoinCTF(event *handler.ComponentEvent) error {
 		_, err = event.UpdateInteractionResponse(
 			discord.NewMessageUpdateBuilder().
 				SetEmbeds(discord.NewEmbedBuilder().
-					SetColor(havcebot.ColorBlurple).
+					SetColor(ColorBlurple).
 					SetDescriptionf("You already joined CTF `%s`.", ctf).
 					Build()).
 				Build())
@@ -184,36 +184,37 @@ func (s *Server) handleJoinCTF(event *handler.ComponentEvent) error {
 		discord.NewMessageCreateBuilder().
 			SetEphemeral(true).
 			SetEmbeds(discord.NewEmbedBuilder().
-				SetColor(havcebot.ColorGreen).
+				SetColor(ColorGreen).
 				SetDescriptionf("You successfully joined CTF `%s`.", ctf).
 				Build()).
 			Build())
 	return err
 }
 
-func (s *Server) handleCloseCTF(event *handler.CommandEvent) error {
-	ctf := event.SlashCommandInteractionData().String("name")
+func (s *Server) handleUpdateCanJoin(canJoin bool) func(event *handler.CommandEvent) error {
+	return func(event *handler.CommandEvent) error {
+		ctf := event.SlashCommandInteractionData().String("name")
 
-	err := event.DeferCreateMessage(true)
-	if err != nil {
+		err := event.DeferCreateMessage(true)
+		if err != nil {
+			return err
+		}
+
+		_, err = s.CTFService.UpdateCTF(context.TODO(), ctf, havcebot.CTFUpdate{
+			CanJoin: &canJoin,
+		})
+		if err != nil {
+			return err
+		}
+
+		_, err = event.CreateFollowupMessage(
+			discord.NewMessageCreateBuilder().
+				SetEphemeral(true).
+				SetEmbeds(discord.NewEmbedBuilder().
+					SetColor(ColorGreen).
+					SetDescriptionf("You successfully set registrations for CTF `%s` to %t.", ctf, canJoin).
+					Build()).
+				Build())
 		return err
 	}
-
-	newCanJoin := false
-	_, err = s.CTFService.UpdateCTF(context.TODO(), ctf, havcebot.CTFUpdate{
-		CanJoin: &newCanJoin,
-	})
-	if err != nil {
-		return err
-	}
-
-	_, err = event.CreateFollowupMessage(
-		discord.NewMessageCreateBuilder().
-			SetEphemeral(true).
-			SetEmbeds(discord.NewEmbedBuilder().
-				SetColor(havcebot.ColorGreen).
-				SetDescriptionf("You successfully closed registrations for CTF `%s`.", ctf).
-				Build()).
-			Build())
-	return err
 }

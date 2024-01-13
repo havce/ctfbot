@@ -9,6 +9,7 @@ import (
 	"github.com/disgoorg/disgo/handler/middleware"
 	"github.com/disgoorg/snowflake/v2"
 	"github.com/havce/havcebot"
+	"github.com/havce/havcebot/ctftime"
 )
 
 type Server struct {
@@ -18,7 +19,8 @@ type Server struct {
 	router handler.Router
 	client bot.Client
 
-	CTFService havcebot.CTFService
+	CTFService    havcebot.CTFService
+	CTFTimeClient *ctftime.Client
 }
 
 func NewServer() *Server {
@@ -31,7 +33,12 @@ func NewServer() *Server {
 		r.Command("/new_ctf", s.handleCommandNewCTF)
 		r.Component("/new_ctf/{ctf}/create", s.handleCreateCTF)
 		r.Component("/join/{ctf}", s.handleJoinCTF)
-		r.Command("/close_ctf", s.handleCloseCTF)
+		r.Command("/close_ctf", s.handleUpdateCanJoin(false))
+		r.Command("/open_ctf", s.handleUpdateCanJoin(true))
+	})
+
+	s.router.Group(func(r handler.Router) {
+		r.Command("/info_ctf", s.handleInfoCTF)
 	})
 
 	return s
