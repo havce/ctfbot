@@ -5,8 +5,9 @@ import (
 
 	"github.com/disgoorg/disgo"
 	"github.com/disgoorg/disgo/bot"
+	"github.com/disgoorg/disgo/cache"
+	"github.com/disgoorg/disgo/gateway"
 	"github.com/disgoorg/disgo/handler"
-	"github.com/disgoorg/disgo/handler/middleware"
 	"github.com/disgoorg/snowflake/v2"
 	"github.com/havce/havcebot"
 	"github.com/havce/havcebot/ctftime"
@@ -28,13 +29,21 @@ func NewServer() *Server {
 		router: handler.New(),
 	}
 
-	s.router.Use(middleware.Logger)
+	// THese routes can be issued by anyone.
 	s.router.Group(func(r handler.Router) {
+		r.Use(AdminOnly)
 		r.Command("/new_ctf", s.handleCommandNewCTF)
 		r.Component("/new_ctf/{ctf}/create", s.handleCreateCTF)
-		r.Component("/join/{ctf}", s.handleJoinCTF)
 		r.Command("/close_ctf", s.handleUpdateCanJoin(false))
 		r.Command("/open_ctf", s.handleUpdateCanJoin(true))
+	})
+
+	// These routes are not authenticated.
+	s.router.Group(func(r handler.Router) {
+		r.Use(s.MustBeInsideCTF)
+		r.Component("/join/{ctf}", s.handleJoinCTF)
+		r.Command("/flag", s.handleFlag("🚩"))
+		r.Command("/blood", s.handleFlag("🩸"))
 	})
 
 	s.router.Group(func(r handler.Router) {
@@ -47,8 +56,12 @@ func NewServer() *Server {
 func (s *Server) Open(ctx context.Context) (err error) {
 	s.client, err = disgo.New(
 		s.BotToken,
-		bot.WithDefaultGateway(),
+		bot.WithGatewayConfigOpts(
+			gateway.WithIntents(gateway.IntentGuilds|gateway.IntentGuildMembers)),
 		bot.WithEventListeners(s.router),
+		bot.WithCacheConfigOpts(
+			cache.WithCaches(cache.FlagChannels|cache.FlagMembers|cache.FlagRoles),
+		),
 	)
 	if err != nil {
 		return err

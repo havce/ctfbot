@@ -51,5 +51,13 @@ var (
 				},
 			},
 		},
+		discord.SlashCommandCreate{
+			Name:        "flag",
+			Description: "Congrats! Prepend the channel name with a 🚩 emoji.",
+		},
+		discord.SlashCommandCreate{
+			Name:        "blood",
+			Description: "Prepends the channel name with a 🩸 emoji.",
+		},
 	}
 )

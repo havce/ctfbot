@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/disgoorg/disgo/discord"
@@ -101,7 +103,8 @@ func (s *Server) handleCreateCTF(event *handler.ComponentEvent) error {
 		Name:       ctf,
 		Start:      time.Now(),
 		PlayerRole: ctf,
-		CanJoin:    true})
+		CanJoin:    true,
+	})
 	if err != nil {
 		return err
 	}
@@ -143,18 +146,12 @@ func (s *Server) handleJoinCTF(event *handler.ComponentEvent) error {
 		return err
 	}
 
-	roles, err := s.client.Rest().GetRoles(snowflake.MustParse(s.GuildID))
-	if err != nil {
-		return err
-	}
-
 	var ctfRole *discord.Role
-	for _, role := range roles {
+	s.client.Caches().RolesForEach(*event.GuildID(), func(role discord.Role) {
 		if role.Name == retrievedCTF.PlayerRole {
 			ctfRole = &role
-			break
 		}
-	}
+	})
 
 	if ctfRole == nil {
 		return fmt.Errorf("could not find role for CTF %s", ctf)
@@ -217,4 +214,52 @@ func (s *Server) handleUpdateCanJoin(canJoin bool) func(event *handler.CommandEv
 				Build())
 		return err
 	}
+}
+
+func (s *Server) handleFlag(prefix string) func(event *handler.CommandEvent) error {
+	return func(event *handler.CommandEvent) error {
+		if slices.Contains(ChannelBlocklist, event.Channel().Name()) {
+			return event.CreateMessage(discord.NewMessageCreateBuilder().
+				SetContentf("You cannot flag in this channel!").
+				SetEphemeral(true).Build())
+		}
+
+		// Check if someone has already flagged this.
+		if strings.HasPrefix(event.Channel().Name(), prefix) {
+			return event.CreateMessage(discord.NewMessageCreateBuilder().
+				SetContentf("Someone has already flagged this!").
+				SetEphemeral(true).Build())
+		}
+
+		newName := prefix + " " + event.Channel().Name()
+
+		_, err := s.client.Rest().UpdateChannel(event.Channel().ID(), discord.GuildTextChannelUpdate{
+			Name: &newName,
+		})
+		if err != nil {
+			return err
+		}
+
+		return event.CreateMessage(discord.NewMessageCreateBuilder().
+			SetContentf("%s %s! %s has flagged %s.", prefix,
+				Cheer(), event.User().String(), event.Channel().Name()).
+			Build())
+	}
+}
+
+func Cheer() string {
+	cheers := []string{
+		"Hooray",
+		"Woo-hoo",
+		"Cheers",
+		"Yippee",
+		"Yay",
+		"Let's go",
+		"Hip, hip, hooray",
+		"Fantastic",
+		"Celebrate",
+		"Party time",
+	}
+
+	return cheers[rand.Intn(len(cheers))]
 }

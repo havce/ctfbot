@@ -20,7 +20,7 @@ func (s *Server) handleInfoCTF(event *handler.CommandEvent) error {
 	vote, ok := event.SlashCommandInteractionData().OptBool("vote")
 
 	// In order to enable vote it needs to be both set and enabled.
-	vote = vote && ok
+	vote = ok && vote
 
 	weeks := 2
 	maybeWeeks, ok := event.SlashCommandInteractionData().OptInt("weeks")
@@ -34,6 +34,7 @@ func (s *Server) handleInfoCTF(event *handler.CommandEvent) error {
 	events, err := s.CTFTimeClient.FindEvents(context.TODO(), ctftime.EventFilter{
 		Start:  &now,
 		Finish: &finish,
+		Limit:  9,
 	})
 	if err != nil {
 		return err
@@ -49,14 +50,14 @@ func (s *Server) handleInfoCTF(event *handler.CommandEvent) error {
 
 		title := event.Title
 		if vote {
-			title = fmt.Sprintf("%s %s", havcebot.Itoe(i+1), event.Title)
+			title = havcebot.Itoe(i+1) + " " + title
 		}
 
 		embed := discord.Embed{
 			Title:       title,
 			Description: event.Description,
 			Footer: &discord.EmbedFooter{
-				Text: "Informations provided here may not be correct or up to date",
+				Text: "Informations provided here may be incorrect or out of date",
 			},
 			Color: ColorNotQuiteBlack,
 			URL:   event.URL,
@@ -81,7 +82,7 @@ func (s *Server) handleInfoCTF(event *handler.CommandEvent) error {
 				},
 				{
 					Name:  "Rating",
-					Value: strconv.FormatFloat(event.Weight, 'f', -1, 64),
+					Value: strconv.FormatFloat(event.Weight, 'f', 2, 64),
 				},
 				{
 					Name:  "Enrolled participants",
@@ -108,13 +109,13 @@ func (s *Server) handleInfoCTF(event *handler.CommandEvent) error {
 	}
 
 	event.CreateMessage(discord.NewMessageCreateBuilder().
-		SetContentf("Listed %d upcoming CTF, from now (%s) and %s.\nHappy CTFing! :smile:", len(embeds), formatTime(&now), formatTime(&finish)).
+		SetContentf("Listed %d upcoming CTF, until %s.\nHappy CTFing! :smile:", len(embeds), formatTime(&finish)).
 		ClearAllowedMentions().
 		SetEphemeral(true).
 		Build())
 
 	if vote {
-		for i, _ := range embeds {
+		for i := range embeds {
 			err = s.client.Rest().AddReaction(event.Channel().ID(), msg.ID, havcebot.Itoe(i+1))
 			if err != nil {
 				return err
