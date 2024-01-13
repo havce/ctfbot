@@ -26,10 +26,12 @@ var (
 )
 
 type Config struct {
-	General struct {
-		GuildID  string `toml:"guild_id"`
-		BotToken string `toml:"bot_token"`
-	} `toml:"general"`
+	Discord struct {
+		GuildID             string `toml:"guild_id"`
+		BotToken            string `toml:"bot_token"`
+		RegistrationChannel string `toml:"registration_channel"`
+		GeneralChannel      string `toml:"general_channel"`
+	} `toml:"discord"`
 
 	DB struct {
 		DSN string `toml:"dsn"`
@@ -41,10 +43,17 @@ const (
 	DefaultConfigPath = "~/havcebot.toml"
 )
 
+const (
+	DefaultRegistrationChannel = "registration"
+	DefaultGeneralChannel      = "general"
+)
+
 // DefaultConfig returns a new instance of Config with defaults set.
 func DefaultConfig() Config {
 	var config Config
 	config.DB.DSN = DefaultDSN
+	config.Discord.RegistrationChannel = DefaultRegistrationChannel
+	config.Discord.GeneralChannel = DefaultGeneralChannel
 	return config
 }
 
@@ -183,8 +192,10 @@ func (m *Main) Run(ctx context.Context) (err error) {
 	ctfTimeClient := ctftime.NewClient()
 	ctfService := sqlite.NewCTFService(m.DB)
 
-	m.Discord.BotToken = m.Config.General.BotToken
-	m.Discord.GuildID = m.Config.General.GuildID
+	m.Discord.BotToken = m.Config.Discord.BotToken
+	m.Discord.GuildID = m.Config.Discord.GuildID
+	m.Discord.RegistrationChannel = m.Config.Discord.RegistrationChannel
+	m.Discord.GeneralChannel = m.Config.Discord.GeneralChannel
 
 	m.Discord.CTFService = ctfService
 	m.Discord.CTFTimeClient = ctfTimeClient

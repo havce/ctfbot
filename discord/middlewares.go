@@ -2,7 +2,6 @@ package discord
 
 import (
 	"context"
-	"errors"
 
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
@@ -25,14 +24,9 @@ var AdminOnly handler.Middleware = func(next handler.Handler) handler.Handler {
 
 func (s *Server) MustBeInsideCTF(next handler.Handler) handler.Handler {
 	return func(e *events.InteractionCreate) (err error) {
-		c, ok := s.client.Caches().Channel(e.Channel().ID())
-		if !ok {
-			return errors.New("not in cache")
-		}
-
-		parent, ok := s.client.Caches().Channel(*c.ParentID())
-		if !ok {
-			return errors.New("not in cache")
+		parent, err := s.getParentChannel(e.Channel().ID())
+		if err != nil {
+			return err
 		}
 
 		_, err = s.CTFService.FindCTFByName(context.TODO(), parent.Name())

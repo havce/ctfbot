@@ -22,6 +22,10 @@ type Server struct {
 
 	CTFService    havcebot.CTFService
 	CTFTimeClient *ctftime.Client
+
+	// Channel default names.
+	GeneralChannel      string
+	RegistrationChannel string
 }
 
 func NewServer() *Server {
@@ -34,21 +38,22 @@ func NewServer() *Server {
 		r.Use(AdminOnly)
 		r.Command("/new_ctf", s.handleCommandNewCTF)
 		r.Component("/new_ctf/{ctf}/create", s.handleCreateCTF)
-		r.Command("/close_ctf", s.handleUpdateCanJoin(false))
-		r.Command("/open_ctf", s.handleUpdateCanJoin(true))
+		r.Command("/close", s.handleUpdateCanJoin(false))
+		r.Command("/open", s.handleUpdateCanJoin(true))
+		r.Command("/vote", s.handleInfoCTF(false))
 	})
 
 	// These routes are not authenticated.
 	s.router.Group(func(r handler.Router) {
 		r.Use(s.MustBeInsideCTF)
 		r.Component("/join/{ctf}", s.handleJoinCTF)
-		r.Command("/flag", s.handleFlag("🚩"))
-		r.Command("/blood", s.handleFlag("🩸"))
-		r.Command("/new_chal", s.handleNewChal)
+		r.Command("/flag", s.handleFlag(false))
+		r.Command("/blood", s.handleFlag(true))
+		r.Command("/new", s.handleNewChal)
 	})
 
 	s.router.Group(func(r handler.Router) {
-		r.Command("/info_ctf", s.handleInfoCTF)
+		r.Command("/info", s.handleInfoCTF(false))
 	})
 
 	return s

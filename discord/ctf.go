@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/handler"
@@ -76,7 +76,7 @@ func (s *Server) handleCreateCTF(event *handler.ComponentEvent) error {
 	regChannel, err := s.client.Rest().CreateGuildChannel(
 		*event.GuildID(),
 		discord.GuildTextChannelCreate{
-			Name:     "registration",
+			Name:     s.RegistrationChannel,
 			Topic:    fmt.Sprintf("%s player registration", ctf),
 			ParentID: category.ID(),
 			PermissionOverwrites: []discord.PermissionOverwrite{
@@ -114,7 +114,7 @@ func (s *Server) handleCreateCTF(event *handler.ComponentEvent) error {
 	_, err = s.client.Rest().CreateGuildChannel(
 		*event.GuildID(),
 		discord.GuildTextChannelCreate{
-			Name:     "general",
+			Name:     s.GeneralChannel,
 			ParentID: category.ID(),
 			PermissionOverwrites: []discord.PermissionOverwrite{
 				discord.RolePermissionOverwrite{
@@ -223,14 +223,16 @@ func (s *Server) handleJoinCTF(event *handler.ComponentEvent) error {
 
 func (s *Server) handleUpdateCanJoin(canJoin bool) func(event *handler.CommandEvent) error {
 	return func(event *handler.CommandEvent) error {
-		ctf := event.SlashCommandInteractionData().String("name")
+		if err := event.DeferCreateMessage(true); err != nil {
+			return err
+		}
 
-		err := event.DeferCreateMessage(true)
+		parentChannel, err := s.getParentChannel(event.Channel().ID())
 		if err != nil {
 			return err
 		}
 
-		_, err = s.CTFService.UpdateCTF(context.TODO(), ctf, havcebot.CTFUpdate{
+		_, err = s.CTFService.UpdateCTF(context.TODO(), parentChannel.Name(), havcebot.CTFUpdate{
 			CanJoin: &canJoin,
 		})
 		if err != nil {
@@ -242,26 +244,44 @@ func (s *Server) handleUpdateCanJoin(canJoin bool) func(event *handler.CommandEv
 				SetEphemeral(true).
 				SetEmbeds(discord.NewEmbedBuilder().
 					SetColor(ColorGreen).
-					SetDescriptionf("You successfully set registrations for CTF `%s` to %t.", ctf, canJoin).
+					SetDescriptionf("You successfully set registrations for CTF `%s` to %t.", parentChannel.Name(), canJoin).
 					Build()).
 				Build())
 		return err
 	}
 }
 
-func (s *Server) handleFlag(prefix string) func(event *handler.CommandEvent) error {
+func (s *Server) handleFlag(blood bool) func(event *handler.CommandEvent) error {
 	return func(event *handler.CommandEvent) error {
-		if slices.Contains(ChannelBlocklist, event.Channel().Name()) {
-			return event.CreateMessage(discord.NewMessageCreateBuilder().
+		prefix := "🚩"
+		if blood {
+			prefix = "🩸"
+		}
+
+		if err := event.DeferCreateMessage(true); err != nil {
+			return err
+		}
+
+		if !s.canIFlagHere(event.Channel().Name()) {
+			_, err := event.CreateFollowupMessage(discord.NewMessageCreateBuilder().
 				SetContentf("You cannot flag in this channel!").
 				SetEphemeral(true).Build())
+			return err
 		}
 
 		// Check if someone has already flagged this.
-		if strings.HasPrefix(event.Channel().Name(), prefix) {
-			return event.CreateMessage(discord.NewMessageCreateBuilder().
-				SetContentf("Someone has already flagged this!").
-				SetEphemeral(true).Build())
+		if utf8.RuneCountInString(event.Channel().Name()) > 0 {
+			// Decode first rune. We don't care about the byte length.
+			c, _ := utf8.DecodeRuneInString(event.Channel().Name())
+
+			blocklist := []string{"🚩", "🩸"}
+			// Check against blocklist.
+			if slices.Contains(blocklist, string(c)) {
+				_, err := event.CreateFollowupMessage(discord.NewMessageCreateBuilder().
+					SetContentf("Someone has already flagged this!").
+					SetEphemeral(true).Build())
+				return err
+			}
 		}
 
 		newName := prefix + " " + event.Channel().Name()
@@ -273,15 +293,21 @@ func (s *Server) handleFlag(prefix string) func(event *handler.CommandEvent) err
 			return err
 		}
 
-		return event.CreateMessage(discord.NewMessageCreateBuilder().
-			SetContentf("%s %s! %s has flagged %s.", prefix,
+		// Show everyone who flagged this!
+		_, err = event.CreateFollowupMessage(discord.NewMessageCreateBuilder().
+			SetEphemeral(false).
+			SetContentf("%s %s! %s has flagged `%s`.", prefix,
 				cheer(), event.User().String(), event.Channel().Name()).
 			Build())
+		return err
 	}
 }
 
 func (s *Server) handleNewChal(event *handler.CommandEvent) error {
 	chalName := event.SlashCommandInteractionData().String("name")
+	if err := event.DeferCreateMessage(true); err != nil {
+		return err
+	}
 
 	found := false
 	s.client.Caches().ChannelsForEach(func(channel discord.GuildChannel) {
@@ -292,16 +318,18 @@ func (s *Server) handleNewChal(event *handler.CommandEvent) error {
 	})
 
 	if found {
-		return event.CreateMessage(discord.NewMessageCreateBuilder().
+		_, err := event.CreateFollowupMessage(discord.NewMessageCreateBuilder().
 			SetContentf("Someone has already created %s!", chalName).
 			SetEphemeral(true).Build())
+		return err
 	}
 
-	currentChannel, _ := s.client.Caches().Channel(event.Channel().ID())
-	parentChannel, _ := s.client.Caches().Channel(*currentChannel.ParentID())
-
+	// We already validated the existence of them in the middleware.
+	// If someone has already deleted them in the meantime, well, this sucks.
+	parentChannel, _ := s.getParentChannel(event.Channel().ID())
 	ctf, _ := s.CTFService.FindCTFByName(context.TODO(), parentChannel.Name())
 
+	// Search @everyone and the PlayerRole IDs.
 	var roleID *snowflake.ID
 	var everyoneID *snowflake.ID
 	s.client.Caches().RolesForEach(*event.GuildID(), func(role discord.Role) {
@@ -336,7 +364,8 @@ func (s *Server) handleNewChal(event *handler.CommandEvent) error {
 		return err
 	}
 
-	return event.CreateMessage(discord.NewMessageCreateBuilder().
+	_, err = event.CreateFollowupMessage(discord.NewMessageCreateBuilder().
 		SetEphemeral(true).
-		SetContentf("Successfully added new channel %s.", chalName).Build())
+		SetContentf("Successfully added new channel `%s`.", chalName).Build())
+	return err
 }

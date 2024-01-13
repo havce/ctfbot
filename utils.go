@@ -1,6 +1,8 @@
 package havcebot
 
-import "strconv"
+import (
+	"strconv"
+)
 
 func Itoe(i int) string {
 	switch i {
