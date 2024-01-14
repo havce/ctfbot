@@ -5,6 +5,7 @@ services:
     volumes:
       - "./havcebotd.toml:/havcebotd.toml:ro"
       - "database:/database"
+    restart: unless-stopped
 
 volumes:
   database:
