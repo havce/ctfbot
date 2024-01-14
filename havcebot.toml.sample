@@ -1,0 +1,9 @@
+[db]
+dsn = "./havcebot.sqlite"
+
+[discord]
+# Required
+app_id = ""
+
+# Required
+bot_token = ""
