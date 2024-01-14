@@ -5,8 +5,8 @@ import "github.com/disgoorg/disgo/discord"
 var (
 	commands = []discord.ApplicationCommandCreate{
 		discord.SlashCommandCreate{
-			Name:        "new_ctf",
-			Description: "[admin] Creates a new CTF, and creates the category",
+			Name:        "new",
+			Description: "[admin] Creates a new CTF.",
 			Options: []discord.ApplicationCommandOption{
 				discord.ApplicationCommandOptionString{
 					Name:        "name",
@@ -17,11 +17,11 @@ var (
 		},
 		discord.SlashCommandCreate{
 			Name:        "close",
-			Description: "[admin] Close registrations to the named CTF",
+			Description: "[admin] Close registrations to the CTF you're in.",
 		},
 		discord.SlashCommandCreate{
 			Name:        "open",
-			Description: "[admin] Open registrations to the named CTF",
+			Description: "[admin] Open registrations to the CTF you're in.",
 		},
 		discord.SlashCommandCreate{
 			Name:        "info",
@@ -45,15 +45,15 @@ var (
 		},
 		discord.SlashCommandCreate{
 			Name:        "flag",
-			Description: "Prepends the channel name with a 🚩 emoji.",
+			Description: "Marks the challenge as solved with a 🚩 emoji.",
 		},
 		discord.SlashCommandCreate{
 			Name:        "blood",
-			Description: "Prepends the channel name with a 🩸 emoji.",
+			Description: "Marks the challenge as solved with a 🩸 emoji.",
 		},
 		discord.SlashCommandCreate{
-			Name:        "new",
-			Description: "Add new private text channel",
+			Name:        "chal",
+			Description: "Add new text channel to discuss chal.",
 			Options: []discord.ApplicationCommandOption{
 				discord.ApplicationCommandOptionString{
 					Name:        "name",

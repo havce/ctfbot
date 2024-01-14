@@ -11,18 +11,17 @@ import (
 	"github.com/havce/havcebot/ctftime"
 )
 
-const DefaultDisplayLimit = 9
+const (
+	DefaultDisplayLimit = 9
+	DefaultWeeks        = 2
+)
 
 func (s *Server) handleInfoCTF(vote bool) func(event *handler.CommandEvent) error {
 	return func(event *handler.CommandEvent) error {
-		weeks := 2
+		weeks := DefaultWeeks
 		maybeWeeks, ok := event.SlashCommandInteractionData().OptInt("weeks")
 		if ok {
 			weeks = maybeWeeks
-		}
-
-		if err := event.DeferCreateMessage(!vote); err != nil {
-			return err
 		}
 
 		now := time.Now()
@@ -34,7 +33,7 @@ func (s *Server) handleInfoCTF(vote bool) func(event *handler.CommandEvent) erro
 			Limit:  DefaultDisplayLimit,
 		})
 		if err != nil {
-			return err
+			return Error(event, s.client.Logger(), err)
 		}
 
 		embeds := []discord.Embed{}
@@ -98,25 +97,41 @@ func (s *Server) handleInfoCTF(vote bool) func(event *handler.CommandEvent) erro
 			embeds = append(embeds, embed)
 		}
 
-		msg, err := event.CreateFollowupMessage(discord.NewMessageCreateBuilder().
-			SetEmbeds(embeds...).
-			SetEphemeral(!vote).
-			Build(),
-		)
-		if err != nil {
-			return err
-		}
-
-		// If we need to vote we now react to ourselves.
+		// Create a vote through a separate REST API call not to mess with
+		// our complex system of mirrors and levers to handle errors.
 		if vote {
+			msg, err := s.client.Rest().CreateMessage(event.Channel().ID(), discord.NewMessageCreateBuilder().
+				SetEmbeds(embeds...).
+				SetEphemeral(false).
+				Build(),
+			)
+
+			if err != nil {
+				return Error(event, s.client.Logger(), err)
+			}
+
 			for i := range embeds {
 				err = s.client.Rest().AddReaction(event.Channel().ID(), msg.ID, havcebot.Itoe(i+1))
 				if err != nil {
-					return err
+					return Error(event, s.client.Logger(), err)
 				}
 			}
+
+			_, err = event.CreateFollowupMessage(discord.NewMessageCreateBuilder().
+				SetContent("Happy voting! :smile:").Build())
+			if err != nil {
+				return Error(event, s.client.Logger(), err)
+			}
+			return nil
 		}
 
+		_, err = event.CreateFollowupMessage(discord.NewMessageCreateBuilder().
+			SetEmbeds(embeds...).
+			Build(),
+		)
+		if err != nil {
+			return Error(event, s.client.Logger(), err)
+		}
 		return nil
 	}
 }

@@ -8,7 +8,7 @@ import (
 	"github.com/disgoorg/disgo/handler"
 )
 
-// This middleware restricts the routes to Administrators only.
+// AdminOnly restricts access to the routes to Administrators only.
 var AdminOnly handler.Middleware = func(next handler.Handler) handler.Handler {
 	return func(e *events.InteractionCreate) error {
 		if e.Member().Permissions.Has(discord.PermissionAdministrator) {
@@ -17,14 +17,15 @@ var AdminOnly handler.Middleware = func(next handler.Handler) handler.Handler {
 
 		return e.Respond(discord.InteractionResponseTypeCreateMessage,
 			discord.NewMessageCreateBuilder().
-				SetContent("You're not authorized to run this command.").
-				SetEphemeral(true).Build())
+				SetEmbeds(messageEmbedError("You're not authorized to run this command.")).Build())
 	}
 }
 
+// MustBeInsideCTF is a middleware that checks whether the event
+// comes from a registered CTF. Otherwise it fails.
 func (s *Server) MustBeInsideCTF(next handler.Handler) handler.Handler {
 	return func(e *events.InteractionCreate) (err error) {
-		parent, err := s.getParentChannel(e.Channel().ID())
+		parent, err := s.parentChannel(e.Channel().ID())
 		if err != nil {
 			return err
 		}
@@ -33,8 +34,7 @@ func (s *Server) MustBeInsideCTF(next handler.Handler) handler.Handler {
 		if err != nil {
 			return e.Respond(discord.InteractionResponseTypeCreateMessage,
 				discord.NewMessageCreateBuilder().
-					SetContentf("You're not inside a CTF, you cannot issue this command.").
-					SetEphemeral(true).Build())
+					SetEmbeds(messageEmbedError("You're not inside a CTF, you cannot issue this command here.")).Build())
 		}
 
 		return next(e)

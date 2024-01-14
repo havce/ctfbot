@@ -14,7 +14,7 @@ func formatTime(t *time.Time) string {
 	return fmt.Sprintf("<t:%d:F>", t.Unix())
 }
 
-func (s *Server) getParentChannel(channelID snowflake.ID) (discord.GuildChannel, error) {
+func (s *Server) parentChannel(channelID snowflake.ID) (discord.GuildChannel, error) {
 	currentChannel, present := s.client.Caches().Channel(channelID)
 	if !present {
 		return nil, havcebot.Errorf(havcebot.ENOTFOUND, "Channel not found.")
@@ -27,6 +27,7 @@ func (s *Server) getParentChannel(channelID snowflake.ID) (discord.GuildChannel,
 	return parentChannel, nil
 }
 
+// cheer() is a simple function that returns a random cheer phrase.
 func cheer() string {
 	cheers := []string{
 		"Hooray",
