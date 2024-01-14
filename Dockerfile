@@ -13,7 +13,7 @@ ENV CGO_ENABLED=0
 
 RUN go build -o havcebotd ./cmd/havcebotd
 
-FROM gcr.io/distroless/static-debian12:nonroot
+FROM gcr.io/distroless/static-debian12
 
 COPY --from=builder /app/havcebotd /havcebotd
 
