@@ -20,7 +20,7 @@ func (s *Server) handleInfoCTF(vote bool) func(event *handler.CommandEvent) erro
 	return func(event *handler.CommandEvent) error {
 		weeks := DefaultWeeks
 		maybeWeeks, ok := event.SlashCommandInteractionData().OptInt("weeks")
-		if ok {
+		if ok && maybeWeeks > 0 {
 			weeks = maybeWeeks
 		}
 
