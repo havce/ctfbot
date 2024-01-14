@@ -1,0 +1,10 @@
+version: '3'
+services:
+  havcebot:
+    build: .
+    volumes:
+      - "./havcebotd.toml:/havcebotd.toml:ro"
+      - "database:/database"
+
+volumes:
+  database:
