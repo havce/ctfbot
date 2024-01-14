@@ -7,3 +7,6 @@ app_id = ""
 
 # Required
 bot_token = ""
+
+# Required 
+guild_id = ""
