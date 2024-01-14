@@ -4,7 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"slices"
+	"strconv"
+	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -15,7 +18,7 @@ import (
 )
 
 func (s *Server) handleCommandNewCTF(event *handler.CommandEvent) error {
-	ctfName := event.SlashCommandInteractionData().String("name")
+	ctfName := s.extractCTFName(event.SlashCommandInteractionData().String("name"))
 
 	return event.CreateMessage(discord.NewMessageCreateBuilder().
 		SetEmbeds(discord.NewEmbedBuilder().
@@ -28,6 +31,44 @@ func (s *Server) handleCommandNewCTF(event *handler.CommandEvent) error {
 		).
 		Build(),
 	)
+}
+
+func (s *Server) extractCTFName(name string) string {
+	ctftimeEvent := 0
+
+	var err error
+
+	numberCandidate := name
+	// Try to parse CTFTime URL.
+	if strings.Contains(name, "ctftime.org") {
+		u, err := url.Parse(name)
+		if err != nil {
+			s.client.Logger().Warn("Couldn't parse URL %w", err)
+			return name
+		}
+
+		ep := u.EscapedPath()
+		pathComponents := strings.Split(ep, "/")
+
+		i := slices.Index(pathComponents, "event")
+		if i == -1 || i+1 >= len(ep) {
+			return name
+		}
+		numberCandidate = pathComponents[i+1]
+	}
+
+	ctftimeEvent, err = strconv.Atoi(numberCandidate)
+	if err != nil {
+		return name
+	}
+
+	event, err := s.CTFTimeClient.FindEventByID(context.TODO(), ctftimeEvent)
+	if err != nil {
+		s.client.Logger().Warn("Couldn't fetch ctftime information %w", err)
+		return name
+	}
+
+	return event.Title
 }
 
 func (s *Server) handleCreateCTF(event *handler.ComponentEvent) error {
@@ -154,12 +195,8 @@ func (s *Server) handleCreateCTF(event *handler.ComponentEvent) error {
 
 func (s *Server) handleJoinCTF(event *handler.ComponentEvent) error {
 	ctf := event.Variables["ctf"]
-	if ctf == "" {
-		return errors.New("empty ctf name")
-	}
 
-	err := event.DeferCreateMessage(true)
-	if err != nil {
+	if err := event.DeferCreateMessage(true); err != nil {
 		return err
 	}
 

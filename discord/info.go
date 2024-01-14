@@ -11,6 +11,8 @@ import (
 	"github.com/havce/havcebot/ctftime"
 )
 
+const DefaultDisplayLimit = 9
+
 func (s *Server) handleInfoCTF(vote bool) func(event *handler.CommandEvent) error {
 	return func(event *handler.CommandEvent) error {
 		weeks := 2
@@ -29,7 +31,7 @@ func (s *Server) handleInfoCTF(vote bool) func(event *handler.CommandEvent) erro
 		events, err := s.CTFTimeClient.FindEvents(context.TODO(), ctftime.EventFilter{
 			Start:  &now,
 			Finish: &finish,
-			Limit:  9,
+			Limit:  DefaultDisplayLimit,
 		})
 		if err != nil {
 			return err
