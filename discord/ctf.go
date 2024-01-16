@@ -24,6 +24,8 @@ const (
 func (s *Server) handleCommandNewCTF(event *handler.CommandEvent) error {
 	ctfName := s.extractCTFName(event.SlashCommandInteractionData().String("name"))
 
+	urlEncodedCTFName := url.PathEscape(ctfName)
+
 	_, err := event.CreateFollowupMessage(discord.NewMessageCreateBuilder().
 		SetEmbeds(discord.NewEmbedBuilder().
 			SetColor(ColorBlurple).
@@ -31,7 +33,7 @@ func (s *Server) handleCommandNewCTF(event *handler.CommandEvent) error {
 			Build()).
 		SetEphemeral(true).
 		AddActionRow(
-			discord.NewSuccessButton("Yes, create it", fmt.Sprintf("new/%s/create", ctfName)),
+			discord.NewSuccessButton("Yes, create it", fmt.Sprintf("new/%s/create", urlEncodedCTFName)),
 		).
 		Build(),
 	)
@@ -81,7 +83,10 @@ func (s *Server) extractCTFName(name string) string {
 }
 
 func (s *Server) handleCreateCTF(event *handler.ComponentEvent) error {
-	ctf := event.Variables["ctf"]
+	ctf, err := url.PathUnescape(event.Variables["ctf"])
+	if err != nil {
+		return Error(event, s.client.Logger(), err)
+	}
 
 	// Create role with CTF name.
 	role, err := s.client.Rest().CreateRole(
