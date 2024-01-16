@@ -11,8 +11,8 @@ type CTF struct {
 	Start time.Time
 
 	// Discord-related information.
-	PlayerRole string
-	CanJoin    bool
+	RoleID  string
+	CanJoin bool
 
 	// CTFTime infos.
 	CTFTimeURL string
@@ -27,7 +27,7 @@ func (c *CTF) Validate() error {
 		return Errorf(EINVALID, "Name required.")
 	}
 
-	if c.PlayerRole == "" {
+	if c.RoleID == "" {
 		return Errorf(EINVALID, "Player role required.")
 	}
 
@@ -53,10 +53,10 @@ type CTFService interface {
 
 // CTFFilter represents a filter passed to FindCTFs().
 type CTFFilter struct {
-	ID         *int
-	Name       *string
-	PlayerRole *string
-	CanJoin    *bool
+	ID      *int
+	Name    *string
+	RoleID  *string
+	CanJoin *bool
 
 	// Limit and offset.
 	Limit  int
@@ -66,7 +66,7 @@ type CTFFilter struct {
 // CTFUpdate represents a filter passed to UpdateCTF().
 type CTFUpdate struct {
 	Name       *string
-	PlayerRole *string
+	RoleID     *string
 	CanJoin    *bool
 	CTFTimeURL *string
 	Start      *time.Time

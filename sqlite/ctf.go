@@ -102,8 +102,8 @@ func findCTFs(ctx context.Context, tx *Tx, filter havcebot.CTFFilter) (_ []*havc
 		where, args = append(where, "name = ?"), append(args, *v)
 	}
 
-	if v := filter.PlayerRole; v != nil {
-		where, args = append(where, "player_role = ?"), append(args, *v)
+	if v := filter.RoleID; v != nil {
+		where, args = append(where, "role_id = ?"), append(args, *v)
 	}
 
 	if v := filter.CanJoin; v != nil {
@@ -122,7 +122,7 @@ func findCTFs(ctx context.Context, tx *Tx, filter havcebot.CTFFilter) (_ []*havc
 		    id,
 		    name,
 		    start,
-		    player_role,
+		    role_id,
 			can_join,
 			ctftime_url,
 		    created_at,
@@ -147,7 +147,7 @@ func findCTFs(ctx context.Context, tx *Tx, filter havcebot.CTFFilter) (_ []*havc
 			&ctf.ID,
 			&ctf.Name,
 			(*NullTime)(&ctf.Start),
-			&ctf.PlayerRole,
+			&ctf.RoleID,
 			&ctf.CanJoin,
 			&ctf.CTFTimeURL,
 			(*NullTime)(&ctf.CreatedAt),
@@ -181,7 +181,7 @@ func createCTF(ctx context.Context, tx *Tx, ctf *havcebot.CTF) error {
 		INSERT INTO ctfs (
 			name,
 			start,
-			player_role,
+			role_id,
 			can_join,
 			ctftime_url,
 			created_at,
@@ -191,7 +191,7 @@ func createCTF(ctx context.Context, tx *Tx, ctf *havcebot.CTF) error {
 	`,
 		ctf.Name,
 		(*NullTime)(&ctf.Start),
-		ctf.PlayerRole,
+		ctf.RoleID,
 		ctf.CanJoin,
 		ctf.CTFTimeURL,
 		(*NullTime)(&ctf.CreatedAt),
@@ -228,8 +228,8 @@ func updateCTF(ctx context.Context, tx *Tx, name string, upd havcebot.CTFUpdate)
 		ctf.CanJoin = *v
 	}
 
-	if v := upd.PlayerRole; v != nil {
-		ctf.PlayerRole = *v
+	if v := upd.RoleID; v != nil {
+		ctf.RoleID = *v
 	}
 
 	if v := upd.CTFTimeURL; v != nil {
@@ -253,7 +253,7 @@ func updateCTF(ctx context.Context, tx *Tx, name string, upd havcebot.CTFUpdate)
 		SET can_join = ?,
 			start = ?,
 			ctftime_url = ?,
-			player_role = ?,
+			role_id = ?,
 			start = ?,
 		    updated_at = ?
 		WHERE name = ?
@@ -261,7 +261,7 @@ func updateCTF(ctx context.Context, tx *Tx, name string, upd havcebot.CTFUpdate)
 		ctf.CanJoin,
 		(*NullTime)(&ctf.Start),
 		ctf.CTFTimeURL,
-		ctf.PlayerRole,
+		ctf.RoleID,
 		(*NullTime)(&ctf.Start),
 		(*NullTime)(&ctf.UpdatedAt),
 		name,

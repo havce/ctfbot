@@ -21,6 +21,11 @@ const (
 	bloodEmoji = "🩸"
 )
 
+const (
+	DefaultChannelPrivileges = discord.PermissionsAllText | discord.PermissionsAllVoice |
+		discord.PermissionUseApplicationCommands | discord.PermissionAddReactions | discord.PermissionAttachFiles | discord.PermissionEmbedLinks
+)
+
 func (s *Server) handleCommandNewCTF(event *handler.CommandEvent) error {
 	ctfName := s.extractCTFName(event.SlashCommandInteractionData().String("name"))
 
@@ -86,6 +91,12 @@ func (s *Server) handleCreateCTF(event *handler.ComponentEvent) error {
 	ctf, err := url.PathUnescape(event.Variables["ctf"])
 	if err != nil {
 		return Error(event, err)
+	}
+
+	// Check if CTF is already present with the same name.
+	_, err = s.CTFService.FindCTFByName(context.TODO(), ctf)
+	if err == nil {
+		return Error(event, havcebot.Errorf(havcebot.ECONFLICT, "A CTF with the same name has already been created."))
 	}
 
 	// Create role with CTF name.
@@ -162,7 +173,7 @@ func (s *Server) handleCreateCTF(event *handler.ComponentEvent) error {
 			SetDescriptionf("Press the button to join `%s`", ctf).
 			Build()).
 		AddActionRow(
-			discord.NewPrimaryButton(fmt.Sprintf("Join %s", ctf), fmt.Sprintf("join/%s", ctf)),
+			discord.NewPrimaryButton(fmt.Sprintf("Join %s", ctf), fmt.Sprintf("join/%s", url.PathEscape(ctf))),
 		).Build())
 	if err != nil {
 		return Error(event, err)
@@ -181,7 +192,7 @@ func (s *Server) handleCreateCTF(event *handler.ComponentEvent) error {
 				},
 				discord.RolePermissionOverwrite{
 					RoleID: role.ID,
-					Allow:  discord.PermissionsAllText | discord.PermissionUseApplicationCommands,
+					Allow:  DefaultChannelPrivileges,
 				},
 			},
 		},
@@ -191,10 +202,12 @@ func (s *Server) handleCreateCTF(event *handler.ComponentEvent) error {
 	}
 
 	err = s.CTFService.CreateCTF(context.TODO(), &havcebot.CTF{
-		Name:       ctf,
-		Start:      time.Now(),
-		PlayerRole: ctf,
-		CanJoin:    true,
+		Name:  ctf,
+		Start: time.Now(),
+		// Parse the role.ID as uint64 and then convert
+		// as string.
+		RoleID:  strconv.FormatUint(uint64(role.ID), 10),
+		CanJoin: true,
 	})
 	if err != nil {
 		return Error(event, err)
@@ -217,9 +230,17 @@ func (s *Server) handleCreateCTF(event *handler.ComponentEvent) error {
 }
 
 func (s *Server) handleJoinCTF(event *handler.ComponentEvent) error {
-	ctf := event.Variables["ctf"]
+	ctf, err := url.PathUnescape(event.Variables["ctf"])
+	if err != nil {
+		return Error(event, err)
+	}
 
 	retrievedCTF, err := s.CTFService.FindCTFByName(context.TODO(), ctf)
+	if err != nil {
+		return Error(event, err)
+	}
+
+	roleID, err := snowflake.Parse(retrievedCTF.RoleID)
 	if err != nil {
 		return Error(event, err)
 	}
@@ -228,25 +249,21 @@ func (s *Server) handleJoinCTF(event *handler.ComponentEvent) error {
 		return Error(event, havcebot.Errorf(havcebot.EUNAUTHORIZED, "Registrations are closed for `%s`. Ask an admin if you want to join.", ctf))
 	}
 
-	var ctfRole *discord.Role
-	s.client.Caches().RolesForEach(*event.GuildID(), func(role discord.Role) {
-		if role.Name == retrievedCTF.PlayerRole {
-			ctfRole = &role
-		}
-	})
-
-	if ctfRole == nil {
+	role, found := s.client.Caches().Role(*event.GuildID(), roleID)
+	if !found {
 		return Error(event,
-			havcebot.Errorf(havcebot.ENOTFOUND, "Could not find role for CTF `%s`", ctf))
+			havcebot.Errorf(havcebot.ENOTFOUND, "Couldn't find player role for `%s`. Maybe it was deleted?", ctf))
 	}
 
-	if slices.Contains(event.Member().RoleIDs, ctfRole.ID) {
+	if slices.Contains(event.Member().RoleIDs, role.ID) {
 		return Error(event,
 			havcebot.Errorf(havcebot.ECONFLICT, "You already joined `%s`", ctf))
 	}
 
-	roleIds := append(event.Member().RoleIDs, ctfRole.ID)
+	// Add the roleID to the roleIDs of the user.
+	roleIds := append(event.Member().RoleIDs, role.ID)
 
+	// Actually update the user.
 	_, err = s.client.Rest().UpdateMember(*event.GuildID(), event.User().ID, discord.MemberUpdate{
 		Roles: &roleIds,
 	})
@@ -265,6 +282,7 @@ func (s *Server) handleUpdateCanJoin(canJoin bool) func(event *handler.CommandEv
 			return Error(event, err)
 		}
 
+		// If you're not inside a CTF it will output a CTF not found error.
 		_, err = s.CTFService.UpdateCTF(context.TODO(), parentChannel.Name(),
 			havcebot.CTFUpdate{
 				CanJoin: &canJoin,
@@ -377,26 +395,27 @@ func (s *Server) handleNewChal(event *handler.CommandEvent) error {
 	// But the error would show up in a later call.
 	ctf, _ := s.CTFService.FindCTFByName(context.TODO(), parentChannel.Name())
 
-	// Search @everyone and the PlayerRole IDs.
-	var roleID *snowflake.ID
+	// Search @everyone role ID.
 	var everyoneID *snowflake.ID
 	s.client.Caches().RolesForEach(*event.GuildID(), func(role discord.Role) {
-		if role.Name == ctf.PlayerRole {
-			roleID = &role.ID
-		}
-
 		if role.Name == "@everyone" {
 			everyoneID = &role.ID
 		}
 	})
 
-	if roleID == nil {
-		return Error(event, havcebot.Errorf(havcebot.EINTERNAL, "Player role `%s` not found.", ctf.PlayerRole))
+	roleID, err := snowflake.Parse(ctf.RoleID)
+	if err != nil {
+		return Error(event, err)
+	}
+
+	role, found := s.client.Caches().Role(*event.GuildID(), roleID)
+	if !found {
+		return Error(event, havcebot.Errorf(havcebot.EINTERNAL, "Couldn't find player role for `%s`. Maybe it was deleted?", ctf.Name))
 	}
 
 	// Create the channel with our custom permissions.
 	// No one but the current role members should see the channel.
-	_, err := s.client.Rest().CreateGuildChannel(*event.GuildID(), discord.GuildTextChannelCreate{
+	_, err = s.client.Rest().CreateGuildChannel(*event.GuildID(), discord.GuildTextChannelCreate{
 		Name:     chalName,
 		ParentID: parentChannel.ID(),
 		PermissionOverwrites: []discord.PermissionOverwrite{
@@ -405,8 +424,8 @@ func (s *Server) handleNewChal(event *handler.CommandEvent) error {
 				Deny:   discord.PermissionsAll,
 			},
 			discord.RolePermissionOverwrite{
-				RoleID: *roleID,
-				Allow:  discord.PermissionsAllText | discord.PermissionUseApplicationCommands,
+				RoleID: role.ID,
+				Allow:  DefaultChannelPrivileges,
 			},
 		},
 	})

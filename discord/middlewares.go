@@ -17,6 +17,7 @@ var AdminOnly handler.Middleware = func(next handler.Handler) handler.Handler {
 
 		return e.Respond(discord.InteractionResponseTypeCreateMessage,
 			discord.NewMessageCreateBuilder().
+				SetEphemeral(true).
 				SetEmbeds(messageEmbedError("You're not authorized to run this command.")).Build())
 	}
 }
@@ -34,6 +35,7 @@ func (s *Server) MustBeInsideCTF(next handler.Handler) handler.Handler {
 		if err != nil {
 			return e.Respond(discord.InteractionResponseTypeCreateMessage,
 				discord.NewMessageCreateBuilder().
+					SetEphemeral(true).
 					SetEmbeds(messageEmbedError("You're not inside a CTF, you cannot issue this command here.")).Build())
 		}
 
