@@ -51,7 +51,7 @@ func (db *DB) Open() (err error) {
 
 	// Make the parent directory unless using an in-memory db.
 	if db.DSN != ":memory:" {
-		if err := os.MkdirAll(filepath.Dir(db.DSN), 0700); err != nil {
+		if err := os.MkdirAll(filepath.Dir(db.DSN), 0o700); err != nil {
 			return err
 		}
 	}
@@ -120,7 +120,7 @@ func (db *DB) migrateFile(name string) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Ensure migration has not already been run.
 	var n int
@@ -229,11 +229,4 @@ func FormatError(err error) error {
 	default:
 		return err
 	}
-}
-
-// logstr is a helper function for printing and returning a string.
-// It can be useful for printing out query text.
-func logstr(s string) string {
-	println(s)
-	return s
 }

@@ -22,7 +22,7 @@ func (s *CTFService) FindCTFByName(ctx context.Context, name string) (*havcebot.
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Fetch CTF object.
 	return findCTFByName(ctx, tx, name)
@@ -33,7 +33,7 @@ func (s *CTFService) FindCTFs(ctx context.Context, filter havcebot.CTFFilter) ([
 	if err != nil {
 		return nil, 0, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	return findCTFs(ctx, tx, filter)
 }
@@ -43,7 +43,7 @@ func (s *CTFService) CreateCTF(ctx context.Context, ctf *havcebot.CTF) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Create CTF.
 	if err := createCTF(ctx, tx, ctf); err != nil {
@@ -57,7 +57,7 @@ func (s *CTFService) UpdateCTF(ctx context.Context, name string, upd havcebot.CT
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	// Update the CTF object.
 	ctf, err := updateCTF(ctx, tx, name, upd)
@@ -72,7 +72,7 @@ func (s *CTFService) DeleteCTF(ctx context.Context, name string) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	if err := deleteCTF(ctx, tx, name); err != nil {
 		return err

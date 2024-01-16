@@ -1,8 +1,7 @@
 package discord
 
 import (
-	"log/slog"
-
+	"github.com/disgoorg/disgo/bot"
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/rest"
 	"github.com/havce/havcebot"
@@ -10,18 +9,19 @@ import (
 
 type CreateFollowupMessager interface {
 	CreateFollowupMessage(messageCreate discord.MessageCreate, opts ...rest.RequestOpt) (*discord.Message, error)
+	Client() bot.Client
 }
 
-func Error(event CreateFollowupMessager, log *slog.Logger, err error) error {
+func Error(event CreateFollowupMessager, err error) error {
 	// Extract error code and message.
 	code, message := havcebot.ErrorCode(err), havcebot.ErrorMessage(err)
 
 	if code == havcebot.EINTERNAL {
-		log.Error("Internal server error", code, message)
+		event.Client().Logger().Error("Internal server error", code, message)
 	}
 
 	// Print user message to response.
-	event.CreateFollowupMessage(discord.NewMessageCreateBuilder().
+	_, err = event.CreateFollowupMessage(discord.NewMessageCreateBuilder().
 		SetEmbeds(messageEmbedError(message)).Build())
 	return err
 }
@@ -44,6 +44,6 @@ func messageEmbedSuccess(title string, description string) discord.Embed {
 }
 
 func Respond(event CreateFollowupMessager, title string, description string) {
-	event.CreateFollowupMessage(discord.NewMessageCreateBuilder().
+	_, _ = event.CreateFollowupMessage(discord.NewMessageCreateBuilder().
 		SetEmbeds(messageEmbedSuccess(title, description)).Build())
 }

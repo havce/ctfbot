@@ -33,7 +33,7 @@ func (s *Server) handleInfoCTF(vote bool) func(event *handler.CommandEvent) erro
 			Limit:  DefaultDisplayLimit,
 		})
 		if err != nil {
-			return Error(event, s.client.Logger(), err)
+			return Error(event, err)
 		}
 
 		embeds := []discord.Embed{}
@@ -105,22 +105,21 @@ func (s *Server) handleInfoCTF(vote bool) func(event *handler.CommandEvent) erro
 				SetEphemeral(false).
 				Build(),
 			)
-
 			if err != nil {
-				return Error(event, s.client.Logger(), err)
+				return Error(event, err)
 			}
 
 			for i := range embeds {
 				err = s.client.Rest().AddReaction(event.Channel().ID(), msg.ID, havcebot.Itoe(i+1))
 				if err != nil {
-					return Error(event, s.client.Logger(), err)
+					return Error(event, err)
 				}
 			}
 
 			_, err = event.CreateFollowupMessage(discord.NewMessageCreateBuilder().
 				SetContent("Happy voting! :smile:").Build())
 			if err != nil {
-				return Error(event, s.client.Logger(), err)
+				return Error(event, err)
 			}
 			return nil
 		}
@@ -130,7 +129,7 @@ func (s *Server) handleInfoCTF(vote bool) func(event *handler.CommandEvent) erro
 			Build(),
 		)
 		if err != nil {
-			return Error(event, s.client.Logger(), err)
+			return Error(event, err)
 		}
 		return nil
 	}
