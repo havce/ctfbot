@@ -40,27 +40,24 @@ func NewServer() *Server {
 	// order of evaluation is important. It isn't super clean, but it works.
 	s.router.Group(func(r handler.Router) {
 		r.Use(AdminOnly)
-		r.Use(middleware.Defer(discord.InteractionTypeApplicationCommand, false, true))
-		r.Use(middleware.Defer(discord.InteractionTypeComponent, false, true))
-
 		r.Command("/new", s.handleCommandNewCTF)
 		r.Component("/new/{ctf}/create", s.handleCreateCTF)
-		r.Command("/close", s.handleUpdateCanJoin(false))
-		r.Command("/open", s.handleUpdateCanJoin(true))
 		r.Command("/vote", s.handleInfoCTF(true))
 	})
 
+	// Admin only routes and must be under a registered CTF.
 	s.router.Group(func(r handler.Router) {
 		r.Use(s.MustBeInsideCTFAndAdmin)
 		r.Command("/delete", s.handleCommandDeleteCTF)
 		r.Component("/delete/really", s.handleDeleteCTF)
+		r.Command("/close", s.handleUpdateCanJoin(false))
+		r.Command("/open", s.handleUpdateCanJoin(true))
 	})
 
-	// These routes must be hit while inside of a CTF.
+	// These routes must be hit while inside of a CTF, but don't
+	// require any admin priviledge.
 	s.router.Group(func(r handler.Router) {
 		r.Use(s.MustBeInsideCTF)
-		r.Use(middleware.Defer(discord.InteractionTypeApplicationCommand, false, true))
-		r.Use(middleware.Defer(discord.InteractionTypeComponent, false, true))
 
 		r.Component("/join/{ctf}", s.handleJoinCTF)
 		r.Command("/flag", s.handleFlag(false))
@@ -68,7 +65,8 @@ func NewServer() *Server {
 		r.Command("/chal", s.handleNewChal)
 	})
 
-	// These routes can be use by anyone. They won't create any public message.
+	// These routes can be used by anyone.
+	// They won't create any public message.
 	s.router.Group(func(r handler.Router) {
 		r.Use(middleware.Defer(discord.InteractionTypeApplicationCommand, false, true))
 		r.Use(middleware.Defer(discord.InteractionTypeComponent, false, true))

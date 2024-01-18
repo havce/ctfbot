@@ -6,25 +6,38 @@ import (
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
 	"github.com/disgoorg/disgo/handler"
+	"github.com/disgoorg/disgo/handler/middleware"
+	"github.com/havce/havcebot"
 )
 
 // AdminOnly restricts access to the routes to Administrators only.
 var AdminOnly handler.Middleware = func(next handler.Handler) handler.Handler {
 	return func(e *events.InteractionCreate) error {
 		if e.Member().Permissions.Has(discord.PermissionAdministrator) {
-			return next(e)
+			return middleware.Defer(discord.InteractionTypeComponent, false, true)(
+				middleware.Defer(discord.InteractionTypeApplicationCommand, false, true)(next),
+			)(e)
 		}
 
-		return e.Respond(discord.InteractionResponseTypeCreateMessage,
+		_ = e.Respond(discord.InteractionResponseTypeCreateMessage,
 			discord.NewMessageCreateBuilder().
 				SetEphemeral(true).
 				SetEmbeds(messageEmbedError("You're not authorized to run this command.")).Build())
+
+		return havcebot.Errorf(havcebot.EUNAUTHORIZED, "You're not authorized to run this command.")
 	}
 }
 
 func (s *Server) MustBeInsideCTFAndAdmin(next handler.Handler) handler.Handler {
 	return func(e *events.InteractionCreate) error {
-		return AdminOnly(s.MustBeInsideCTF(next))(e)
+		if !e.Member().Permissions.Has(discord.PermissionAdministrator) {
+			_ = e.Respond(discord.InteractionResponseTypeCreateMessage,
+				discord.NewMessageCreateBuilder().
+					SetEphemeral(true).
+					SetEmbeds(messageEmbedError("You're not authorized to run this command.")).Build())
+			return havcebot.Errorf(havcebot.EUNAUTHORIZED, "You're not authorized to run this command.")
+		}
+		return s.MustBeInsideCTF(next)(e)
 	}
 }
 
@@ -46,6 +59,8 @@ func (s *Server) MustBeInsideCTF(next handler.Handler) handler.Handler {
 			return err
 		}
 
-		return next(e)
+		return middleware.Defer(discord.InteractionTypeComponent, false, true)(
+			middleware.Defer(discord.InteractionTypeApplicationCommand, false, true)(next),
+		)(e)
 	}
 }

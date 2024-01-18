@@ -17,7 +17,7 @@ func Error(event CreateFollowupMessager, err error) error {
 	code, message := havcebot.ErrorCode(err), havcebot.ErrorMessage(err)
 
 	if code == havcebot.EINTERNAL {
-		event.Client().Logger().Error("Internal server error", code, message)
+		event.Client().Logger().Error("Internal server error", code, err)
 	}
 
 	// Print user message to response.
@@ -29,7 +29,7 @@ func Error(event CreateFollowupMessager, err error) error {
 // messageError is a utility that builds and outputs a embed.
 func messageEmbedError(message string) discord.Embed {
 	return discord.NewEmbedBuilder().
-		SetTitlef(":warning: There was an error while handling your request.").
+		SetTitlef(":octagonal_sign: There was an error while handling your request.").
 		SetColor(ColorRed).
 		SetDescriptionf(message).
 		SetField(0, "Message", message, true).Build()

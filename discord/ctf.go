@@ -40,6 +40,7 @@ func (s *Server) handleCommandNewCTF(event *handler.CommandEvent) error {
 	_, err = event.CreateFollowupMessage(discord.NewMessageCreateBuilder().
 		SetEmbeds(discord.NewEmbedBuilder().
 			SetColor(ColorBlurple).
+			SetTitle(":white_check_mark: Confirm creation").
 			SetDescriptionf("Would you like to create a new CTF named `%s`?", ctfName).
 			Build()).
 		SetEphemeral(true).
@@ -101,10 +102,11 @@ func (s *Server) handleCommandDeleteCTF(event *handler.CommandEvent) error {
 
 	ctfName := ctf.Name()
 
-	err = event.CreateMessage(discord.NewMessageCreateBuilder().
+	_, err = event.CreateFollowupMessage(discord.NewMessageCreateBuilder().
 		SetEmbeds(discord.NewEmbedBuilder().
-			SetColor(ColorRed).
-			SetDescriptionf("Would you like to delete `%s`? There's no undo.", ctfName).
+			SetColor(ColorFuchsia).
+			SetTitle(":warning: Confirm deletion").
+			SetDescriptionf("Are you sure you want to delete `%s`? There's no undo.", ctfName).
 			Build()).
 		SetEphemeral(true).
 		AddActionRow(
