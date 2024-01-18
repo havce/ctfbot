@@ -51,6 +51,10 @@ var commands = []discord.ApplicationCommandCreate{
 		Description: "Marks the challenge as solved with a 🩸 emoji.",
 	},
 	discord.SlashCommandCreate{
+		Name:        "delete",
+		Description: "[admin] Deletes the CTF.",
+	},
+	discord.SlashCommandCreate{
 		Name:        "chal",
 		Description: "Add new text channel to discuss chal.",
 		Options: []discord.ApplicationCommandOption{

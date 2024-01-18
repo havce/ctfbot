@@ -31,7 +31,13 @@ func (s *Server) handleCommandNewCTF(event *handler.CommandEvent) error {
 
 	urlEncodedCTFName := url.PathEscape(ctfName)
 
-	_, err := event.CreateFollowupMessage(discord.NewMessageCreateBuilder().
+	// Check if CTF is already present with the same name.
+	_, err := s.CTFService.FindCTFByName(context.TODO(), ctfName)
+	if err == nil {
+		return Error(event, havcebot.Errorf(havcebot.ECONFLICT, "A CTF with the same name has already been created."))
+	}
+
+	_, err = event.CreateFollowupMessage(discord.NewMessageCreateBuilder().
 		SetEmbeds(discord.NewEmbedBuilder().
 			SetColor(ColorBlurple).
 			SetDescriptionf("Would you like to create a new CTF named `%s`?", ctfName).
@@ -87,13 +93,97 @@ func (s *Server) extractCTFName(name string) string {
 	return event.Title
 }
 
+func (s *Server) handleCommandDeleteCTF(event *handler.CommandEvent) error {
+	ctf, err := s.parentChannel(event.Channel().ID())
+	if err != nil {
+		return Error(event, err)
+	}
+
+	ctfName := ctf.Name()
+
+	err = event.CreateMessage(discord.NewMessageCreateBuilder().
+		SetEmbeds(discord.NewEmbedBuilder().
+			SetColor(ColorRed).
+			SetDescriptionf("Would you like to delete `%s`? There's no undo.", ctfName).
+			Build()).
+		SetEphemeral(true).
+		AddActionRow(
+			discord.NewDangerButton("Yes, delete it", "delete/really"),
+		).
+		Build(),
+	)
+	if err != nil {
+		return Error(event, err)
+	}
+
+	return err
+}
+
+func (s *Server) handleDeleteCTF(event *handler.ComponentEvent) error {
+	ctf, err := s.parentChannel(event.Channel().ID())
+	if err != nil {
+		return Error(event, err)
+	}
+
+	ctfName := ctf.Name()
+
+	siblings := []snowflake.ID{}
+	s.client.Caches().ChannelsForEach(func(channel discord.GuildChannel) {
+		if channel.ParentID() == nil {
+			return
+		}
+
+		if *channel.ParentID() != ctf.ID() {
+			return
+		}
+
+		siblings = append(siblings, channel.ID())
+	})
+
+	// Delete all channels.
+	for _, channel := range siblings {
+		if err := s.client.Rest().DeleteChannel(channel); err != nil {
+			return Error(event, err)
+		}
+	}
+
+	// Delete parent.
+	if err := s.client.Rest().DeleteChannel(ctf.ID()); err != nil {
+		return Error(event, err)
+	}
+
+	// Fetch the CTF from DB to get the role ID to delete.
+	ctfFromDB, err := s.CTFService.FindCTFByName(context.TODO(), ctfName)
+	if err != nil {
+		return Error(event, err)
+	}
+
+	roleID, err := snowflake.Parse(ctfFromDB.RoleID)
+	if err != nil {
+		return Error(event, err)
+	}
+
+	// Delete the role from Discord.
+	if err := s.client.Rest().DeleteRole(*event.GuildID(), roleID); err != nil {
+		return Error(event, err)
+	}
+
+	// Delete the CTF from db.
+	if err := s.CTFService.DeleteCTF(context.TODO(), ctfName); err != nil {
+		return Error(event, err)
+	}
+
+	Respond(event, "Deletion completed", fmt.Sprintf("You successfully deleted `%s`", ctfName))
+	return nil
+}
+
 func (s *Server) handleCreateCTF(event *handler.ComponentEvent) error {
 	ctf, err := url.PathUnescape(event.Variables["ctf"])
 	if err != nil {
 		return Error(event, err)
 	}
 
-	// Check if CTF is already present with the same name.
+	// Check again if CTF is already present with the same name.
 	_, err = s.CTFService.FindCTFByName(context.TODO(), ctf)
 	if err == nil {
 		return Error(event, havcebot.Errorf(havcebot.ECONFLICT, "A CTF with the same name has already been created."))

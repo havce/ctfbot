@@ -22,6 +22,12 @@ var AdminOnly handler.Middleware = func(next handler.Handler) handler.Handler {
 	}
 }
 
+func (s *Server) MustBeInsideCTFAndAdmin(next handler.Handler) handler.Handler {
+	return func(e *events.InteractionCreate) error {
+		return AdminOnly(s.MustBeInsideCTF(next))(e)
+	}
+}
+
 // MustBeInsideCTF is a middleware that checks whether the event
 // comes from a registered CTF. Otherwise it fails.
 func (s *Server) MustBeInsideCTF(next handler.Handler) handler.Handler {
@@ -33,10 +39,11 @@ func (s *Server) MustBeInsideCTF(next handler.Handler) handler.Handler {
 
 		_, err = s.CTFService.FindCTFByName(context.TODO(), parent.Name())
 		if err != nil {
-			return e.Respond(discord.InteractionResponseTypeCreateMessage,
+			_ = e.Respond(discord.InteractionResponseTypeCreateMessage,
 				discord.NewMessageCreateBuilder().
 					SetEphemeral(true).
 					SetEmbeds(messageEmbedError("You're not inside a CTF, you cannot issue this command here.")).Build())
+			return err
 		}
 
 		return next(e)

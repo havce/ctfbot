@@ -50,6 +50,12 @@ func NewServer() *Server {
 		r.Command("/vote", s.handleInfoCTF(true))
 	})
 
+	s.router.Group(func(r handler.Router) {
+		r.Use(s.MustBeInsideCTFAndAdmin)
+		r.Command("/delete", s.handleCommandDeleteCTF)
+		r.Component("/delete/really", s.handleDeleteCTF)
+	})
+
 	// These routes must be hit while inside of a CTF.
 	s.router.Group(func(r handler.Router) {
 		r.Use(s.MustBeInsideCTF)
