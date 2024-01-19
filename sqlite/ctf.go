@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/havce/havcebot"
+	"github.com/havce/ctfbot"
 )
 
 type CTFService struct {
@@ -17,7 +17,7 @@ func NewCTFService(db *DB) *CTFService {
 	}
 }
 
-func (s *CTFService) FindCTFByName(ctx context.Context, name string) (*havcebot.CTF, error) {
+func (s *CTFService) FindCTFByName(ctx context.Context, name string) (*ctfbot.CTF, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
@@ -28,7 +28,7 @@ func (s *CTFService) FindCTFByName(ctx context.Context, name string) (*havcebot.
 	return findCTFByName(ctx, tx, name)
 }
 
-func (s *CTFService) FindCTFs(ctx context.Context, filter havcebot.CTFFilter) ([]*havcebot.CTF, int, error) {
+func (s *CTFService) FindCTFs(ctx context.Context, filter ctfbot.CTFFilter) ([]*ctfbot.CTF, int, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, 0, err
@@ -38,7 +38,7 @@ func (s *CTFService) FindCTFs(ctx context.Context, filter havcebot.CTFFilter) ([
 	return findCTFs(ctx, tx, filter)
 }
 
-func (s *CTFService) CreateCTF(ctx context.Context, ctf *havcebot.CTF) error {
+func (s *CTFService) CreateCTF(ctx context.Context, ctf *ctfbot.CTF) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -52,7 +52,7 @@ func (s *CTFService) CreateCTF(ctx context.Context, ctf *havcebot.CTF) error {
 	return tx.Commit()
 }
 
-func (s *CTFService) UpdateCTF(ctx context.Context, name string, upd havcebot.CTFUpdate) (*havcebot.CTF, error) {
+func (s *CTFService) UpdateCTF(ctx context.Context, name string, upd ctfbot.CTFUpdate) (*ctfbot.CTF, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
@@ -80,17 +80,17 @@ func (s *CTFService) DeleteCTF(ctx context.Context, name string) error {
 	return tx.Commit()
 }
 
-func findCTFByName(ctx context.Context, tx *Tx, name string) (*havcebot.CTF, error) {
-	ctfs, _, err := findCTFs(ctx, tx, havcebot.CTFFilter{Name: &name})
+func findCTFByName(ctx context.Context, tx *Tx, name string) (*ctfbot.CTF, error) {
+	ctfs, _, err := findCTFs(ctx, tx, ctfbot.CTFFilter{Name: &name})
 	if err != nil {
 		return nil, err
 	} else if len(ctfs) == 0 {
-		return nil, havcebot.Errorf(havcebot.ENOTFOUND, "CTF not found.")
+		return nil, ctfbot.Errorf(ctfbot.ENOTFOUND, "CTF not found.")
 	}
 	return ctfs[0], nil
 }
 
-func findCTFs(ctx context.Context, tx *Tx, filter havcebot.CTFFilter) (_ []*havcebot.CTF, n int, err error) {
+func findCTFs(ctx context.Context, tx *Tx, filter ctfbot.CTFFilter) (_ []*ctfbot.CTF, n int, err error) {
 	// Build WHERE clause. Each part of the WHERE clause is AND-ed together.
 	// Values are appended to an arg list to avoid SQL injection.
 	where, args := []string{"1 = 1"}, []interface{}{}
@@ -140,9 +140,9 @@ func findCTFs(ctx context.Context, tx *Tx, filter havcebot.CTFFilter) (_ []*havc
 	defer rows.Close()
 
 	// Iterate over rows and deserialize into CTF objects.
-	ctfs := make([]*havcebot.CTF, 0)
+	ctfs := make([]*ctfbot.CTF, 0)
 	for rows.Next() {
-		var ctf havcebot.CTF
+		var ctf ctfbot.CTF
 		if err := rows.Scan(
 			&ctf.ID,
 			&ctf.Name,
@@ -166,7 +166,7 @@ func findCTFs(ctx context.Context, tx *Tx, filter havcebot.CTFFilter) (_ []*havc
 }
 
 // createCTF creates a new CTF.
-func createCTF(ctx context.Context, tx *Tx, ctf *havcebot.CTF) error {
+func createCTF(ctx context.Context, tx *Tx, ctf *ctfbot.CTF) error {
 	// Set timestamps to current time.
 	ctf.CreatedAt = tx.now
 	ctf.UpdatedAt = ctf.CreatedAt
@@ -212,7 +212,7 @@ func createCTF(ctx context.Context, tx *Tx, ctf *havcebot.CTF) error {
 }
 
 // updateCTF updates a ctf by name. Returns the new state of the ctf after update.
-func updateCTF(ctx context.Context, tx *Tx, name string, upd havcebot.CTFUpdate) (*havcebot.CTF, error) {
+func updateCTF(ctx context.Context, tx *Tx, name string, upd ctfbot.CTFUpdate) (*ctfbot.CTF, error) {
 	// Fetch current object state. Return an error if current user is not owner.
 	ctf, err := findCTFByName(ctx, tx, name)
 	if err != nil {

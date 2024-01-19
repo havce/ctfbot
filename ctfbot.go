@@ -1,4 +1,4 @@
-package havcebot
+package ctfbot
 
 var (
 	Version = "n/a"

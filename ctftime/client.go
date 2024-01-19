@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"strconv"
 
-	"github.com/havce/havcebot"
+	"github.com/havce/ctfbot"
 )
 
 type Client struct {
@@ -42,9 +42,9 @@ func (c *Client) FindEventByID(ctx context.Context, id int) (*Event, error) {
 	}
 
 	if resp.StatusCode > 400 && resp.StatusCode < 499 {
-		return nil, havcebot.Errorf(havcebot.ENOTFOUND, "Event not found.")
+		return nil, ctfbot.Errorf(ctfbot.ENOTFOUND, "Event not found.")
 	} else if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return nil, havcebot.Errorf(havcebot.EINVALID, "Internal server error.")
+		return nil, ctfbot.Errorf(ctfbot.EINVALID, "Internal server error.")
 	}
 
 	event := &Event{}

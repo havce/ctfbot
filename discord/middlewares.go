@@ -7,7 +7,7 @@ import (
 	"github.com/disgoorg/disgo/events"
 	"github.com/disgoorg/disgo/handler"
 	"github.com/disgoorg/disgo/handler/middleware"
-	"github.com/havce/havcebot"
+	"github.com/havce/ctfbot"
 )
 
 // AdminOnly restricts access to the routes to Administrators only.
@@ -24,7 +24,7 @@ var AdminOnly handler.Middleware = func(next handler.Handler) handler.Handler {
 				SetEphemeral(true).
 				SetEmbeds(messageEmbedError("You're not authorized to run this command.")).Build())
 
-		return havcebot.Errorf(havcebot.EUNAUTHORIZED, "You're not authorized to run this command.")
+		return ctfbot.Errorf(ctfbot.EUNAUTHORIZED, "You're not authorized to run this command.")
 	}
 }
 
@@ -35,7 +35,7 @@ func (s *Server) MustBeInsideCTFAndAdmin(next handler.Handler) handler.Handler {
 				discord.NewMessageCreateBuilder().
 					SetEphemeral(true).
 					SetEmbeds(messageEmbedError("You're not authorized to run this command.")).Build())
-			return havcebot.Errorf(havcebot.EUNAUTHORIZED, "You're not authorized to run this command.")
+			return ctfbot.Errorf(ctfbot.EUNAUTHORIZED, "You're not authorized to run this command.")
 		}
 		return s.MustBeInsideCTF(next)(e)
 	}

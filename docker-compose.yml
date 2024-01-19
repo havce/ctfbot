@@ -1,9 +1,9 @@
 version: '3'
 services:
-  havcebot:
+  ctfbot:
     build: .
     volumes:
-      - "./havcebotd.toml:/havcebotd.toml:ro"
+      - "./ctfbotd.toml:/ctfbotd.toml:ro"
       - "database:/database"
     restart: unless-stopped
 
