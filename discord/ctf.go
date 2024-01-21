@@ -507,7 +507,7 @@ func (s *Server) handleNewChal(event *handler.CommandEvent) error {
 
 	// Create the channel with our custom permissions.
 	// No one but the current role members should see the channel.
-	_, err = s.client.Rest().CreateGuildChannel(*event.GuildID(), discord.GuildTextChannelCreate{
+	channel, err := s.client.Rest().CreateGuildChannel(*event.GuildID(), discord.GuildTextChannelCreate{
 		Name:     chalName,
 		ParentID: parentChannel.ID(),
 		PermissionOverwrites: []discord.PermissionOverwrite{
@@ -521,6 +521,12 @@ func (s *Server) handleNewChal(event *handler.CommandEvent) error {
 			},
 		},
 	})
+	if err != nil {
+		return Error(event, err)
+	}
+
+	_, err = s.client.Rest().CreateMessage(channel.ID(), discord.NewMessageCreateBuilder().SetEmbeds(messageEmbedSuccess(
+		"New challenge!", fmt.Sprintf("%s has created `%s`", event.User().String(), chalName))).Build())
 	if err != nil {
 		return Error(event, err)
 	}
