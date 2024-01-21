@@ -7,8 +7,8 @@ import (
 
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/handler"
-	"github.com/havce/havcebot"
-	"github.com/havce/havcebot/ctftime"
+	"github.com/havce/ctfbot"
+	"github.com/havce/ctfbot/ctftime"
 )
 
 const (
@@ -46,7 +46,7 @@ func (s *Server) handleInfoCTF(vote bool) func(event *handler.CommandEvent) erro
 
 			title := event.Title
 			if vote {
-				title = havcebot.Itoe(i+1) + " " + title
+				title = ctfbot.Itoe(i+1) + " " + title
 			}
 
 			embed := discord.Embed{
@@ -110,7 +110,7 @@ func (s *Server) handleInfoCTF(vote bool) func(event *handler.CommandEvent) erro
 			}
 
 			for i := range embeds {
-				err = s.client.Rest().AddReaction(event.Channel().ID(), msg.ID, havcebot.Itoe(i+1))
+				err = s.client.Rest().AddReaction(event.Channel().ID(), msg.ID, ctfbot.Itoe(i+1))
 				if err != nil {
 					return Error(event, err)
 				}

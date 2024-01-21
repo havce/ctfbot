@@ -7,7 +7,7 @@ import (
 
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/snowflake/v2"
-	"github.com/havce/havcebot"
+	"github.com/havce/ctfbot"
 )
 
 func formatTime(t *time.Time) string {
@@ -17,11 +17,11 @@ func formatTime(t *time.Time) string {
 func (s *Server) parentChannel(channelID snowflake.ID) (discord.GuildChannel, error) {
 	currentChannel, present := s.client.Caches().Channel(channelID)
 	if !present {
-		return nil, havcebot.Errorf(havcebot.ENOTFOUND, "Channel not found.")
+		return nil, ctfbot.Errorf(ctfbot.ENOTFOUND, "Channel not found.")
 	}
 	parentChannel, present := s.client.Caches().Channel(*currentChannel.ParentID())
 	if !present {
-		return nil, havcebot.Errorf(havcebot.ENOTFOUND, "Parent channel of %s not found.", currentChannel.Name())
+		return nil, ctfbot.Errorf(ctfbot.ENOTFOUND, "Parent channel of %s not found.", currentChannel.Name())
 	}
 
 	return parentChannel, nil

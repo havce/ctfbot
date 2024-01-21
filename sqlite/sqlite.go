@@ -218,7 +218,7 @@ func FormatLimitOffset(limit, offset int) string {
 	return ""
 }
 
-// FormatError returns err as a havcebot error, if possible.
+// FormatError returns err as a ctfbot error, if possible.
 // Otherwise returns the original error.
 func FormatError(err error) error {
 	if err == nil {

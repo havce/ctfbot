@@ -13,7 +13,7 @@ import (
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/handler"
 	"github.com/disgoorg/snowflake/v2"
-	"github.com/havce/havcebot"
+	"github.com/havce/ctfbot"
 )
 
 const (
@@ -34,7 +34,7 @@ func (s *Server) handleCommandNewCTF(event *handler.CommandEvent) error {
 	// Check if CTF is already present with the same name.
 	_, err := s.CTFService.FindCTFByName(context.TODO(), ctfName)
 	if err == nil {
-		return Error(event, havcebot.Errorf(havcebot.ECONFLICT, "A CTF with the same name has already been created."))
+		return Error(event, ctfbot.Errorf(ctfbot.ECONFLICT, "A CTF with the same name has already been created."))
 	}
 
 	_, err = event.CreateFollowupMessage(discord.NewMessageCreateBuilder().
@@ -188,7 +188,7 @@ func (s *Server) handleCreateCTF(event *handler.ComponentEvent) error {
 	// Check again if CTF is already present with the same name.
 	_, err = s.CTFService.FindCTFByName(context.TODO(), ctf)
 	if err == nil {
-		return Error(event, havcebot.Errorf(havcebot.ECONFLICT, "A CTF with the same name has already been created."))
+		return Error(event, ctfbot.Errorf(ctfbot.ECONFLICT, "A CTF with the same name has already been created."))
 	}
 
 	// Create role with CTF name.
@@ -293,7 +293,7 @@ func (s *Server) handleCreateCTF(event *handler.ComponentEvent) error {
 		return Error(event, err)
 	}
 
-	err = s.CTFService.CreateCTF(context.TODO(), &havcebot.CTF{
+	err = s.CTFService.CreateCTF(context.TODO(), &ctfbot.CTF{
 		Name:  ctf,
 		Start: time.Now(),
 		// Parse the role.ID as uint64 and then convert
@@ -338,18 +338,18 @@ func (s *Server) handleJoinCTF(event *handler.ComponentEvent) error {
 	}
 
 	if !retrievedCTF.CanJoin {
-		return Error(event, havcebot.Errorf(havcebot.EUNAUTHORIZED, "Registrations are closed for `%s`. Ask an admin if you want to join.", ctf))
+		return Error(event, ctfbot.Errorf(ctfbot.EUNAUTHORIZED, "Registrations are closed for `%s`. Ask an admin if you want to join.", ctf))
 	}
 
 	role, found := s.client.Caches().Role(*event.GuildID(), roleID)
 	if !found {
 		return Error(event,
-			havcebot.Errorf(havcebot.ENOTFOUND, "Couldn't find player role for `%s`. Maybe it was deleted?", ctf))
+			ctfbot.Errorf(ctfbot.ENOTFOUND, "Couldn't find player role for `%s`. Maybe it was deleted?", ctf))
 	}
 
 	if slices.Contains(event.Member().RoleIDs, role.ID) {
 		return Error(event,
-			havcebot.Errorf(havcebot.ECONFLICT, "You already joined `%s`", ctf))
+			ctfbot.Errorf(ctfbot.ECONFLICT, "You already joined `%s`", ctf))
 	}
 
 	// Add the roleID to the roleIDs of the user.
@@ -376,7 +376,7 @@ func (s *Server) handleUpdateCanJoin(canJoin bool) func(event *handler.CommandEv
 
 		// If you're not inside a CTF it will output a CTF not found error.
 		_, err = s.CTFService.UpdateCTF(context.TODO(), parentChannel.Name(),
-			havcebot.CTFUpdate{
+			ctfbot.CTFUpdate{
 				CanJoin: &canJoin,
 			})
 		if err != nil {
@@ -403,8 +403,8 @@ func (s *Server) handleFlag(blood bool) func(event *handler.CommandEvent) error 
 		}
 
 		if !s.flagAllowed(event.Channel().Name()) {
-			return Error(event, havcebot.Errorf(
-				havcebot.EINVALID, "You cannot flag here."))
+			return Error(event, ctfbot.Errorf(
+				ctfbot.EINVALID, "You cannot flag here."))
 		}
 
 		// Check if someone has already flagged this.
@@ -415,7 +415,7 @@ func (s *Server) handleFlag(blood bool) func(event *handler.CommandEvent) error 
 			blocklist := []string{flagEmoji, bloodEmoji}
 			// Check against blocklist.
 			if slices.Contains(blocklist, string(c)) {
-				return Error(event, havcebot.Errorf(havcebot.EINVALID, "Somebody has already %s this.", prefix))
+				return Error(event, ctfbot.Errorf(ctfbot.EINVALID, "Somebody has already %s this.", prefix))
 			}
 		}
 
@@ -478,8 +478,8 @@ func (s *Server) handleNewChal(event *handler.CommandEvent) error {
 
 	// If so, return an error.
 	if found {
-		return Error(event, havcebot.Errorf(
-			havcebot.ECONFLICT, "Somebody has already created `%s`.", chalName))
+		return Error(event, ctfbot.Errorf(
+			ctfbot.ECONFLICT, "Somebody has already created `%s`.", chalName))
 	}
 
 	// We already validated the existence of parentChannel in the middleware.
@@ -502,7 +502,7 @@ func (s *Server) handleNewChal(event *handler.CommandEvent) error {
 
 	role, found := s.client.Caches().Role(*event.GuildID(), roleID)
 	if !found {
-		return Error(event, havcebot.Errorf(havcebot.EINTERNAL, "Couldn't find player role for `%s`. Maybe it was deleted?", ctf.Name))
+		return Error(event, ctfbot.Errorf(ctfbot.EINTERNAL, "Couldn't find player role for `%s`. Maybe it was deleted?", ctf.Name))
 	}
 
 	// Create the channel with our custom permissions.

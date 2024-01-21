@@ -13,10 +13,10 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
-	"github.com/havce/havcebot"
-	"github.com/havce/havcebot/ctftime"
-	"github.com/havce/havcebot/discord"
-	"github.com/havce/havcebot/sqlite"
+	"github.com/havce/ctfbot"
+	"github.com/havce/ctfbot/ctftime"
+	"github.com/havce/ctfbot/discord"
+	"github.com/havce/ctfbot/sqlite"
 )
 
 // Build version, injected during build.
@@ -39,8 +39,8 @@ type Config struct {
 }
 
 const (
-	DefaultDSN        = "~/havcebot.sqlite3"
-	DefaultConfigPath = "~/havcebot.toml"
+	DefaultDSN        = "~/ctfbot.sqlite3"
+	DefaultConfigPath = "~/ctfbot.toml"
 )
 
 const (
@@ -59,8 +59,8 @@ func DefaultConfig() Config {
 
 func main() {
 	// Propagate build information to root package to share globally.
-	havcebot.Version = strings.TrimPrefix(version, "")
-	havcebot.Commit = commit
+	ctfbot.Version = strings.TrimPrefix(version, "")
+	ctfbot.Commit = commit
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
 	defer cancel()
@@ -116,8 +116,8 @@ func (m *Main) Close(ctx context.Context) error {
 }
 
 func (m *Main) ParseFlagAndConfig(ctx context.Context, args []string) error {
-	f := flag.NewFlagSet("havcebotd", flag.ContinueOnError)
-	f.StringVar(&m.ConfigPath, "config-path", "~/.havcebot.toml", "config file path")
+	f := flag.NewFlagSet("ctfbotd", flag.ContinueOnError)
+	f.StringVar(&m.ConfigPath, "config-path", "~/.ctfbot.toml", "config file path")
 	if err := f.Parse(args); err != nil {
 		return err
 	}
@@ -204,7 +204,7 @@ func (m *Main) Run(ctx context.Context) (err error) {
 		return err
 	}
 
-	slog.Log(ctx, slog.LevelInfo, "havcebotd started")
+	slog.Log(ctx, slog.LevelInfo, "ctfbotd started")
 
 	return nil
 }

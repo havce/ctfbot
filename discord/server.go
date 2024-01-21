@@ -12,8 +12,8 @@ import (
 	"github.com/disgoorg/disgo/handler"
 	"github.com/disgoorg/disgo/handler/middleware"
 	"github.com/disgoorg/snowflake/v2"
-	"github.com/havce/havcebot"
-	"github.com/havce/havcebot/ctftime"
+	"github.com/havce/ctfbot"
+	"github.com/havce/ctfbot/ctftime"
 )
 
 type Server struct {
@@ -23,7 +23,7 @@ type Server struct {
 	router handler.Router
 	client bot.Client
 
-	CTFService    havcebot.CTFService
+	CTFService    ctfbot.CTFService
 	CTFTimeClient *ctftime.Client
 
 	// Channel default names.

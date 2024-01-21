@@ -1,4 +1,4 @@
-module github.com/havce/havcebot
+module github.com/havce/ctfbot
 
 go 1.21.6
 

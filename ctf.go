@@ -1,4 +1,4 @@
-package havcebot
+package ctfbot
 
 import (
 	"context"

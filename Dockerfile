@@ -11,10 +11,10 @@ COPY . .
 
 ENV CGO_ENABLED=0
 
-RUN go build -o havcebotd ./cmd/havcebotd
+RUN go build -o ctfbotd ./cmd/ctfbotd
 
 FROM gcr.io/distroless/static-debian12
 
-COPY --from=builder /app/havcebotd /havcebotd
+COPY --from=builder /app/ctfbotd /ctfbotd
 
-ENTRYPOINT ["/havcebotd", "-config-path", "/havcebotd.toml"]
+ENTRYPOINT ["/ctfbotd", "-config-path", "/ctfbotd.toml"]

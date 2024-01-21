@@ -4,7 +4,7 @@ import (
 	"github.com/disgoorg/disgo/bot"
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/rest"
-	"github.com/havce/havcebot"
+	"github.com/havce/ctfbot"
 )
 
 type CreateFollowupMessager interface {
@@ -14,9 +14,9 @@ type CreateFollowupMessager interface {
 
 func Error(event CreateFollowupMessager, err error) error {
 	// Extract error code and message.
-	code, message := havcebot.ErrorCode(err), havcebot.ErrorMessage(err)
+	code, message := ctfbot.ErrorCode(err), ctfbot.ErrorMessage(err)
 
-	if code == havcebot.EINTERNAL {
+	if code == ctfbot.EINTERNAL {
 		event.Client().Logger().Error("Internal server error", code, err)
 	}
 

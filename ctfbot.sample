@@ -1,5 +1,5 @@
 [db]
-dsn = "/database/havcebot.sqlite"
+dsn = "/database/ctfbot.sqlite"
 
 [discord]
 # Required
