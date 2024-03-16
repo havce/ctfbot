@@ -208,7 +208,6 @@ func (s *Server) handleCreateCTF(event *handler.ComponentEvent) error {
 		*event.GuildID(),
 		discord.GuildCategoryChannelCreate{
 			Name:     ctf,
-			Topic:    "new ctf",
 			Position: 1,
 			PermissionOverwrites: []discord.PermissionOverwrite{
 				discord.RolePermissionOverwrite{
