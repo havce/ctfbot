@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/disgoorg/disgo/discord"
-	"github.com/disgoorg/disgo/events"
 	"github.com/disgoorg/disgo/handler"
 	"github.com/disgoorg/disgo/handler/middleware"
 	"github.com/havce/ctfbot"
@@ -12,7 +11,7 @@ import (
 
 // AdminOnly restricts access to the routes to Administrators only.
 var AdminOnly handler.Middleware = func(next handler.Handler) handler.Handler {
-	return func(e *events.InteractionCreate) error {
+	return func(e *handler.InteractionEvent) error {
 		if e.Member().Permissions.Has(discord.PermissionAdministrator) {
 			return middleware.Defer(discord.InteractionTypeComponent, false, true)(
 				middleware.Defer(discord.InteractionTypeApplicationCommand, false, true)(next),
@@ -29,7 +28,7 @@ var AdminOnly handler.Middleware = func(next handler.Handler) handler.Handler {
 }
 
 func (s *Server) MustBeInsideCTFAndAdmin(next handler.Handler) handler.Handler {
-	return func(e *events.InteractionCreate) error {
+	return func(e *handler.InteractionEvent) error {
 		if !e.Member().Permissions.Has(discord.PermissionAdministrator) {
 			_ = e.Respond(discord.InteractionResponseTypeCreateMessage,
 				discord.NewMessageCreateBuilder().
@@ -44,7 +43,7 @@ func (s *Server) MustBeInsideCTFAndAdmin(next handler.Handler) handler.Handler {
 // MustBeInsideCTF is a middleware that checks whether the event
 // comes from a registered CTF. Otherwise it fails.
 func (s *Server) MustBeInsideCTF(next handler.Handler) handler.Handler {
-	return func(e *events.InteractionCreate) (err error) {
+	return func(e *handler.InteractionEvent) (err error) {
 		parent, err := s.parentChannel(e.Channel().ID())
 		if err != nil {
 			return err

@@ -180,7 +180,7 @@ func (s *Server) handleDeleteCTF(event *handler.ComponentEvent) error {
 }
 
 func (s *Server) handleCreateCTF(event *handler.ComponentEvent) error {
-	ctf, err := url.PathUnescape(event.Variables["ctf"])
+	ctf, err := url.PathUnescape(event.Vars["ctf"])
 	if err != nil {
 		return Error(event, err)
 	}
@@ -321,7 +321,7 @@ func (s *Server) handleCreateCTF(event *handler.ComponentEvent) error {
 }
 
 func (s *Server) handleJoinCTF(event *handler.ComponentEvent) error {
-	ctf, err := url.PathUnescape(event.Variables["ctf"])
+	ctf, err := url.PathUnescape(event.Vars["ctf"])
 	if err != nil {
 		return Error(event, err)
 	}
