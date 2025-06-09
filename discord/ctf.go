@@ -66,7 +66,7 @@ func (s *Server) extractCTFName(name string) string {
 	if strings.Contains(name, "ctftime.org") {
 		u, err := url.Parse(name)
 		if err != nil {
-			s.client.Logger().Warn("Couldn't parse URL %w", err)
+			s.client.Logger().Warn("Couldn't parse URL", "err", err)
 			return name
 		}
 
@@ -87,7 +87,7 @@ func (s *Server) extractCTFName(name string) string {
 
 	event, err := s.CTFTimeClient.FindEventByID(context.TODO(), ctftimeEvent)
 	if err != nil {
-		s.client.Logger().Warn("Couldn't fetch ctftime information %w", err)
+		s.client.Logger().Warn("Couldn't fetch ctftime information", "err", err)
 		return name
 	}
 
