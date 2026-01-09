@@ -109,7 +109,7 @@ func (s *Server) handleCommandDeleteCTF(event *handler.CommandEvent) error {
 			Build()).
 		SetEphemeral(true).
 		AddActionRow(
-			discord.NewDangerButton("Yes, delete it", "delete/really"),
+			discord.NewDangerButton("Yes, delete it", "/delete/really"),
 		).
 		Build(),
 	)
@@ -263,7 +263,7 @@ func (s *Server) handleCreateCTF(event *handler.ComponentEvent) error {
 			SetDescriptionf("Press the button to join `%s`", ctf).
 			Build()).
 		AddActionRow(
-			discord.NewPrimaryButton(fmt.Sprintf("Join %s", ctf), fmt.Sprintf("join/%s", url.PathEscape(ctf))),
+			discord.NewPrimaryButton(fmt.Sprintf("Join %s", ctf), fmt.Sprintf("/join/%s", url.PathEscape(ctf))),
 		).Build())
 	if err != nil {
 		return Error(event, err)
