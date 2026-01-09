@@ -191,7 +191,11 @@ func (n *NullTime) Scan(value interface{}) error {
 		*(*time.Time)(n) = time.Time{}
 		return nil
 	} else if value, ok := value.(string); ok {
-		*(*time.Time)(n), _ = time.Parse(time.RFC3339, value)
+		t, err := time.Parse(time.RFC3339, value)
+		if err != nil {
+			return err
+		}
+		*(*time.Time)(n) = t
 		return nil
 	}
 	return fmt.Errorf("NullTime: cannot scan to time.Time: %T", value)

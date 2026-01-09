@@ -59,7 +59,7 @@ func DefaultConfig() Config {
 
 func main() {
 	// Propagate build information to root package to share globally.
-	ctfbot.Version = strings.TrimPrefix(version, "")
+	ctfbot.Version = version
 	ctfbot.Commit = commit
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
@@ -109,7 +109,11 @@ func NewMain() *Main {
 
 func (m *Main) Close(ctx context.Context) error {
 	if m.Discord != nil {
-		return m.Discord.Close(ctx)
+		_ = m.Discord.Close(ctx)
+	}
+
+	if m.DB != nil {
+		return m.DB.Close()
 	}
 
 	return nil
@@ -153,7 +157,7 @@ func expand(path string) (string, error) {
 
 	// Fetch the current user to determine the home path.
 	u, err := user.Current()
-	if err == nil {
+	if err != nil {
 		return filepath.Clean(path), err
 	} else if u.HomeDir == "" {
 		return filepath.Clean(path), errors.New("home directory unset")

@@ -12,7 +12,7 @@ import (
 // AdminOnly restricts access to the routes to Administrators only.
 var AdminOnly handler.Middleware = func(next handler.Handler) handler.Handler {
 	return func(e *handler.InteractionEvent) error {
-		if e.Member().Permissions.Has(discord.PermissionAdministrator) {
+		if e.Member() != nil && e.Member().Permissions.Has(discord.PermissionAdministrator) {
 			return middleware.Defer(discord.InteractionTypeComponent, false, true)(
 				middleware.Defer(discord.InteractionTypeApplicationCommand, false, true)(next),
 			)(e)
@@ -29,7 +29,7 @@ var AdminOnly handler.Middleware = func(next handler.Handler) handler.Handler {
 
 func (s *Server) MustBeInsideCTFAndAdmin(next handler.Handler) handler.Handler {
 	return func(e *handler.InteractionEvent) error {
-		if !e.Member().Permissions.Has(discord.PermissionAdministrator) {
+		if e.Member() == nil || !e.Member().Permissions.Has(discord.PermissionAdministrator) {
 			_ = e.Respond(discord.InteractionResponseTypeCreateMessage,
 				discord.NewMessageCreateBuilder().
 					SetEphemeral(true).
@@ -46,6 +46,10 @@ func (s *Server) MustBeInsideCTF(next handler.Handler) handler.Handler {
 	return func(e *handler.InteractionEvent) (err error) {
 		parent, err := s.parentChannel(e.Channel().ID())
 		if err != nil {
+			_ = e.Respond(discord.InteractionResponseTypeCreateMessage,
+				discord.NewMessageCreateBuilder().
+					SetEphemeral(true).
+					SetEmbeds(messageEmbedError("You're not inside a CTF channel.")).Build())
 			return err
 		}
 
@@ -54,7 +58,7 @@ func (s *Server) MustBeInsideCTF(next handler.Handler) handler.Handler {
 			_ = e.Respond(discord.InteractionResponseTypeCreateMessage,
 				discord.NewMessageCreateBuilder().
 					SetEphemeral(true).
-					SetEmbeds(messageEmbedError("You're not inside a CTF, you cannot issue this command here.")).Build())
+					SetEmbeds(messageEmbedError("This channel is not associated with a registered CTF.")).Build())
 			return err
 		}
 

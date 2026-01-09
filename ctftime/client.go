@@ -40,10 +40,11 @@ func (c *Client) FindEventByID(ctx context.Context, id int) (*Event, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 
-	if resp.StatusCode > 400 && resp.StatusCode < 499 {
+	if resp.StatusCode >= 400 && resp.StatusCode < 500 {
 		return nil, ctfbot.Errorf(ctfbot.ENOTFOUND, "Event not found.")
-	} else if resp.StatusCode < 200 || resp.StatusCode > 299 {
+	} else if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, ctfbot.Errorf(ctfbot.EINVALID, "Internal server error.")
 	}
 
@@ -51,7 +52,6 @@ func (c *Client) FindEventByID(ctx context.Context, id int) (*Event, error) {
 	if err := json.NewDecoder(resp.Body).Decode(event); err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
 
 	return event, err
 }

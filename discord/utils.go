@@ -19,6 +19,9 @@ func (s *Server) parentChannel(channelID snowflake.ID) (discord.GuildChannel, er
 	if !present {
 		return nil, ctfbot.Errorf(ctfbot.ENOTFOUND, "Channel not found.")
 	}
+	if currentChannel.ParentID() == nil {
+		return nil, ctfbot.Errorf(ctfbot.ENOTFOUND, "Channel %s is not inside a category.", currentChannel.Name())
+	}
 	parentChannel, present := s.client.Caches().Channel(*currentChannel.ParentID())
 	if !present {
 		return nil, ctfbot.Errorf(ctfbot.ENOTFOUND, "Parent channel of %s not found.", currentChannel.Name())

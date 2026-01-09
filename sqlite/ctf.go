@@ -113,7 +113,7 @@ func findCTFs(ctx context.Context, tx *Tx, filter ctfbot.CTFFilter) (_ []*ctfbot
 			canJoin = 1
 		}
 
-		where, args = append(where, "can_join"), append(args, canJoin)
+		where, args = append(where, "can_join = ?"), append(args, canJoin)
 	}
 
 	// Execue query with limiting WHERE clause and LIMIT/OFFSET injected.
@@ -254,7 +254,6 @@ func updateCTF(ctx context.Context, tx *Tx, name string, upd ctfbot.CTFUpdate) (
 			start = ?,
 			ctftime_url = ?,
 			role_id = ?,
-			start = ?,
 		    updated_at = ?
 		WHERE name = ?
 	`,
@@ -262,7 +261,6 @@ func updateCTF(ctx context.Context, tx *Tx, name string, upd ctfbot.CTFUpdate) (
 		(*NullTime)(&ctf.Start),
 		ctf.CTFTimeURL,
 		ctf.RoleID,
-		(*NullTime)(&ctf.Start),
 		(*NullTime)(&ctf.UpdatedAt),
 		name,
 	); err != nil {

@@ -29,9 +29,9 @@ func Error(event CreateFollowupMessager, err error) error {
 // messageError is a utility that builds and outputs a embed.
 func messageEmbedError(message string) discord.Embed {
 	return discord.NewEmbedBuilder().
-		SetTitlef(":octagonal_sign: There was an error while handling your request.").
+		SetTitle(":octagonal_sign: There was an error while handling your request.").
 		SetColor(ColorRed).
-		SetDescriptionf(message).
+		SetDescription(message).
 		SetField(0, "Message", message, true).Build()
 }
 

@@ -43,9 +43,8 @@ func (s *Server) handleCommandNewCTF(event *handler.CommandEvent) error {
 			SetTitle(":white_check_mark: Confirm creation").
 			SetDescriptionf("Would you like to create a new CTF named `%s`?", ctfName).
 			Build()).
-		SetEphemeral(true).
 		AddActionRow(
-			discord.NewSuccessButton("Yes, create it", fmt.Sprintf("new/%s/create", urlEncodedCTFName)),
+			discord.NewSuccessButton("Yes, create it", fmt.Sprintf("/new/%s/create", urlEncodedCTFName)),
 		).
 		Build(),
 	)
@@ -74,7 +73,7 @@ func (s *Server) extractCTFName(name string) string {
 		pathComponents := strings.Split(ep, "/")
 
 		i := slices.Index(pathComponents, "event")
-		if i == -1 || i+1 >= len(ep) {
+		if i == -1 || i+1 >= len(pathComponents) {
 			return name
 		}
 		numberCandidate = pathComponents[i+1]
@@ -211,7 +210,7 @@ func (s *Server) handleCreateCTF(event *handler.ComponentEvent) error {
 			Position: 1,
 			PermissionOverwrites: []discord.PermissionOverwrite{
 				discord.RolePermissionOverwrite{
-					RoleID: snowflake.ID(0),
+					RoleID: *event.GuildID(),
 					Deny:   discord.PermissionsAll,
 					Allow:  discord.PermissionViewChannel,
 				},
