@@ -47,3 +47,15 @@ func cheer() string {
 
 	return cheers[rand.Intn(len(cheers))]
 }
+
+func truncate(s string, l int) string {
+	runes := []rune(s)
+	if len(runes) > l {
+		return string(runes[:l-3]) + "..."
+	}
+	return s
+}
+
+func isValidURL(s string) bool {
+	return len(s) > 8 && (s[:7] == "http://" || s[:8] == "https://")
+}

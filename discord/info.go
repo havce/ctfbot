@@ -43,25 +43,50 @@ func (s *Server) handleInfoCTF(vote bool) func(event *handler.CommandEvent) erro
 			for _, team := range event.Organizers {
 				orga += team.Name + " "
 			}
+			orga = truncate(orga, 100)
+			if orga == "" {
+				orga = "Unknown"
+			}
 
 			title := event.Title
+			if title == "" {
+				title = "Untitled Event"
+			}
+			title = truncate(title, 100)
+
 			if vote {
 				title = ctfbot.Itoe(i+1) + " " + title
 			}
 
-			embed := discord.Embed{
-				Title:       title,
-				Description: event.Description,
-				Footer: &discord.EmbedFooter{
-					Text: "Informations provided here may be incorrect or out of date",
-				},
-				Color: ColorNotQuiteBlack,
-				URL:   event.URL,
-				Thumbnail: &discord.EmbedResource{
+			description := truncate(event.Description, 200)
+
+			var thumbnail *discord.EmbedResource
+			if isValidURL(event.Logo) {
+				thumbnail = &discord.EmbedResource{
 					URL:    event.Logo,
 					Width:  100,
 					Height: 100,
+				}
+			}
+
+			ctfTimeURL := event.CTFTimeURL
+			if !isValidURL(ctfTimeURL) {
+				ctfTimeURL = "N/A"
+			}
+
+			ctfLink := event.URL
+			if !isValidURL(ctfLink) {
+				ctfLink = "N/A"
+			}
+
+			embed := discord.Embed{
+				Title:       title,
+				Description: description,
+				Footer: &discord.EmbedFooter{
+					Text: "Informations provided here may be incorrect or out of date",
 				},
+				Color:     ColorNotQuiteBlack,
+				Thumbnail: thumbnail,
 				Timestamp: &now,
 				Fields: []discord.EmbedField{
 					{
@@ -86,14 +111,19 @@ func (s *Server) handleInfoCTF(vote bool) func(event *handler.CommandEvent) erro
 					},
 					{
 						Name:  "CTFTime",
-						Value: event.CTFTimeURL,
+						Value: ctfTimeURL,
 					},
 					{
 						Name:  "CTF link",
-						Value: event.URL,
+						Value: ctfLink,
 					},
 				},
 			}
+
+			if isValidURL(event.URL) {
+				embed.URL = event.URL
+			}
+
 			embeds = append(embeds, embed)
 		}
 
